@@ -26,26 +26,30 @@ int main(int argc, char **argv)
   
     while (ros::ok())
       {
-	imu_data_t* rawIMU = (imu_data_t*) drv->WaitData(); // Threaded Object
-	//Translate the imu packet from the fixed point to the floating point
-	 float accel_x = rawIMU->accel_x*ACCL_TO_M_S2;
-	 float accel_y = rawIMU->accel_y*ACCL_TO_M_S2;
-	 float accel_z = rawIMU->accel_z*ACCL_TO_M_S2;
+  	imu_data_t* rawIMU = (imu_data_t*) drv->WaitData(); // Threaded Object
+  	//Translate the imu packet from the fixed point to the floating point
+  	 float accel_x = rawIMU->accel_x*ACCL_TO_M_S2;
+  	 float accel_y = rawIMU->accel_y*ACCL_TO_M_S2;
+  	 float accel_z = rawIMU->accel_z*ACCL_TO_M_S2;
 	 
-	 float gyro_x = rawIMU->gyro_x*GYRO_TO_RAD_S;
-	 float gyro_y = rawIMU->gyro_y*GYRO_TO_RAD_S;
-	 float gyro_z = rawIMU->gyro_z*GYRO_TO_RAD_S;
-	 double halStamp = rawIMU->tv_sec + ((double)rawIMU->tv_nsec)/1e9;
+  	 float gyro_x = rawIMU->gyro_x*GYRO_TO_RAD_S;
+  	 float gyro_y = rawIMU->gyro_y*GYRO_TO_RAD_S;
+  	 float gyro_z = rawIMU->gyro_z*GYRO_TO_RAD_S;
+  	 double halStamp = rawIMU->tv_sec + ((double)rawIMU->tv_nsec)/1e9;
 
-	 sensor_msgs::Imu imu;
-	 std_msgs::Header header;
-	 geometry_msgs::Quaternion orient;
-	 geometry_msgs::Vector3 lin_acc;
-	 geometry_msgs::Vector3 ang_acc;
+  	 sensor_msgs::Imu imu;
+  	 std_msgs::Header header;
+  	 geometry_msgs::Quaternion orient;
+  	 geometry_msgs::Vector3 lin_acc;
+  	 geometry_msgs::Vector3 ang_acc;
 	 
-	 // add covariances from data sheet
+  	 // add covariances from data sheet
 	 
-	 ros::spinOnce();
+  	 ros::spinOnce();
       }
+  // while(1)
+  //   {
+  //     ;
+  //   }
       return 0;
 }
