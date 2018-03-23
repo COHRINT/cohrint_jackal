@@ -291,6 +291,7 @@ imu_data_t* GladiatorIMU::acquireData()
     {
 
        fullMessage = getSingleMessage();
+       //port->dumpBuffer((uint8_t*)fullMessage, sizeof(gladiator_rx_msg_t));
        if (fullMessage)
 	 {
 	   data = translate(fullMessage);
@@ -388,7 +389,6 @@ imu_data_t* GladiatorIMU::translate(gladiator_rx_msg_t* input)
   
   //Once time is secure, deal with the status byte
   handleStatusByte(input);
-
 
   makeAccel(input->iAccX, &output->accel_x);
   makeAccel(input->iAccY, &output->accel_y);

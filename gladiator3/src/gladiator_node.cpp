@@ -1,4 +1,5 @@
-#include "ros/ros.h"
+#include <ros/ros.h>
+#include <ros/console.h>
 #include "gladiator.h"
 #include "ThreadedObject.h"
 #include "std_msgs/String.h"
@@ -8,6 +9,7 @@
 #include "geometry_msgs/Quaternion.h"
 #include "geometry_msgs/Vector3.h"
 #include <sstream>
+#include <ctime>
 
 //Data is reported in fixed point, adjust for reporting in floating point
 #define GYRO_TO_DEG_S (0.001f) // Gyro X,Y,Z
@@ -20,36 +22,68 @@ int main(int argc, char **argv)
   ros::init(argc,argv,"gladiator_node");
   ros::NodeHandle n;
   ros::Publisher imu_pub = n.advertise<sensor_msgs::Imu>("imu",1000);
+  ROS_INFO("Initializing Gladiator IMU");
+  unsigned int seq = 1;
+  ros::Time now;
   
   GladiatorIMU *drv = new GladiatorIMU("/dev/gladiator"); // udev rule
   drv->start();
   
     while (ros::ok())
       {
+	//  	ROS_INFO("Top of Loop");
   	imu_data_t* rawIMU = (imu_data_t*) drv->WaitData(); // Threaded Object
   	//Translate the imu packet from the fixed point to the floating point
   	 float accel_x = rawIMU->accel_x*ACCL_TO_M_S2;
   	 float accel_y = rawIMU->accel_y*ACCL_TO_M_S2;
   	 float accel_z = rawIMU->accel_z*ACCL_TO_M_S2;
+	 // ROS_INFO_STREAM("Accel_x: " << accel_x);
+	 // ROS_INFO_STREAM("Accel_y: " << accel_y);
+	 // ROS_INFO_STREAM("Accel_z: " << accel_z);
 	 
   	 float gyro_x = rawIMU->gyro_x*GYRO_TO_RAD_S;
   	 float gyro_y = rawIMU->gyro_y*GYRO_TO_RAD_S;
   	 float gyro_z = rawIMU->gyro_z*GYRO_TO_RAD_S;
   	 double halStamp = rawIMU->tv_sec + ((double)rawIMU->tv_nsec)/1e9;
 
+	 
+	 // MAKE THE MESSAGE
   	 sensor_msgs::Imu imu;
-  	 std_msgs::Header header;
-  	 geometry_msgs::Quaternion orient;
-  	 geometry_msgs::Vector3 lin_acc;
-  	 geometry_msgs::Vector3 ang_acc;
 	 
-  	 // add covariances from data sheet
-	 
+	 // Make header
+	 imu.header.seq = seq;
+	 imu.header.stamp = ros::Time::now();
+	 imu.header.frame_id = "Gladiator IMU";
+	 //	 ROS_INFO_STREAM("Time: " << imu.header.stamp);
+
+	 // Quaternions
+	 imu.orientation.x = 0;
+	 imu.orientation.y = 0;
+	 imu.orientation.z = 0;
+	 imu.orientation.w = 1.0;
+	 imu.orientation_covariance = {0, 0, 0,
+				       0, 0, 0,
+				       0, 0, 0};
+
+	 // Linear Acceleration
+	 imu.linear_acceleration.x = accel_x;
+	 imu.linear_acceleration.y = accel_y;
+	 imu.linear_acceleration.z = accel_z;
+	 imu.linear_acceleration_covariance = {0, 0, 0,
+					       0, 0, 0,
+					       0, 0, 0};
+	 // Angular Velocity
+	 imu.angular_velocity.x = gyro_x;
+	 imu.angular_velocity.y = gyro_y;
+	 imu.angular_velocity.z = gyro_z;
+	 imu.angular_velocity_covariance = {0, 0, 0,
+					    0, 0, 0,
+					    0, 0, 0};
+
+	 imu_pub.publish(imu);
+	 seq++;
   	 ros::spinOnce();
       }
-  // while(1)
-  //   {
-  //     ;
-  //   }
+
       return 0;
 }
