@@ -1,3 +1,0 @@
-<launch>
-	<node name="gladiator_node" pkg="gladiator3" type="gladiator3_node" output="screen"/>
-</launch>
