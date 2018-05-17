@@ -1,0 +1,12 @@
+Steps
+Read decaWave datasheet and take notes
+Cross reference arudino code, step through it and see what's going on there
+Install an IDE and set up the tool chain to interface with the stlink
+
+Set up tx and rx functionality (ping)
+Set up ranging functionality
+Set up ros interface
+Set up a GUI for displaying
+Set up pass through serial terminal functionality
+
+Acabado
