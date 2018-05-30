@@ -24,7 +24,7 @@ To Set Up M2:
 - Disable airMAX if present
 - Under WIRELESS:
 	- Set to Station
-	- Scan and connect to desired AP
+	- Scan and connect to desired AP [lock]
 - Under NETWORK:
 	- Set to bridge
 	- Choose static IP
@@ -32,10 +32,10 @@ To Set Up M2:
 		- Netmask: 255.255.255.0
 		- Gateway IP: 192.168.1.1
 
-* If problems connecting try editing the /etc/netwrk/interfaces *
-Add: 
-	allow-hotplug eth0
-	iface eth0 inet static
-	address 192.168.1.xxx
-	gateway 192.168.1.1
-	netmask 255.255.255.0
+* If problems connecting try editing the /etc/network/interfaces *
+-Add: 
+	- allow-hotplug eth0
+	- iface eth0 inet static
+	- address 192.168.1.xxx
+	- gateway 192.168.1.1
+	- netmask 255.255.255.0
