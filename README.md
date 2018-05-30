@@ -20,6 +20,14 @@ Chain:
 MSI -> Gig E Switch -> PoE Injector -> Rocket M2
 
 To Set Up M2:
+- Edit the /etc/network/interfaces and restart... sudo service networking/network-manager/resolvconf restart
+-Add: 
+	- allow-hotplug eth0
+	- iface eth0 inet static
+	- address 192.168.1.xxx
+	- gateway 192.168.1.1
+	- netmask 255.255.255.0
+
 - Go to 192.168.1.20
 - Disable airMAX if present
 - Under WIRELESS:
@@ -27,15 +35,7 @@ To Set Up M2:
 	- Scan and connect to desired AP [lock]
 - Under NETWORK:
 	- Set to bridge
-	- Choose static IP
-		- IP: 192.168.1.xxx
-		- Netmask: 255.255.255.0
-		- Gateway IP: 192.168.1.1
+- Test and Apply changes
+- revert /etc/network/interfaces
 
-* If problems connecting try editing the /etc/network/interfaces *
--Add: 
-	- allow-hotplug eth0
-	- iface eth0 inet static
-	- address 192.168.1.xxx
-	- gateway 192.168.1.1
-	- netmask 255.255.255.0
+
