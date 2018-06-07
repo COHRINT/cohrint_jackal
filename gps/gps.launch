@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="gps" type="gps_serial.py" name="gps" launch-prefix="echo '' | sudo -S my_command"/>
+</launch>
