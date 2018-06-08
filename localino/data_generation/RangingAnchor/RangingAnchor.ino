@@ -75,11 +75,12 @@ float samplingRate = 0;
 void setup() {
     // DEBUG monitoring
     Serial.begin(115200);
-    delay(1000);
-    char c = 'l';
-    while ( c != 's' ){
-      Serial.read(c);
+    char c = 'a';
+    while ( c != 'c' ){
+      Serial.read();
     }
+    delay(1000);
+    Serial.println(F("Ready"));
     //    Serial.println(F("### DW1000-arduino-ranging-anchor ###"));
     // initialize the driver
     DW1000.begin(PIN_IRQ, PIN_RST);

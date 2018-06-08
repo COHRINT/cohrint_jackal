@@ -29,10 +29,14 @@ class Gatherer():
         
     def read_distance(self):
         self.times.append(time.time() - self.start_time)
-        s = self.l.read(4)
-        f = float(s.decode("utf-8"))
-#        set_trace()
-        self.dists.append(f)
+        try:
+            
+            s = self.l.read(4)
+            f = float(s.decode("utf-8"))
+            #        set_trace()
+            self.dists.append(f)
+        except:
+            pass
 
 # Credits Mayank Jaiswal
 class GracefulKiller:
@@ -49,11 +53,12 @@ if __name__ == '__main__':
     killer = GracefulKiller()
     g = Gatherer()
     while True:
-        c = g.l.read(1)
-        if ord(c) == ord('#'): # ignore it if it's not the case
-#            set_trace()
-            g.read_distance()
-            
+        try:
+            c = g.l.read(1)
+            if ord(c) == ord('#'): # ignore it if it's not the case
+                g.read_distance()
+        except serial.serialutil.SerialException:
+            pass
         if killer.kill_now:
             break
         
