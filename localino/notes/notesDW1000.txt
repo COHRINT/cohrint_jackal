@@ -1,0 +1,48 @@
+Asset location up to 10cm (Two Way ranging)
+3.5 GHz to 6.5 GHz
+Data rates of 110kbps, 850 kbps, 6.8 Mbps
+SPI interface
+
+The easiest solution to this would be to plug and play an Arduino module that gives two way ranging (That would be AWESOME) [and that worked...]
+
+Things to test and develop:
+- What the improvement in performance of doing a multichannel, multi prf round robin scheme versus the other methods of using single channel, dual channel
+- Let's acquire data w/ respect to location accuracy and speed (possibly using the vicon space)
+  	Build the model and get actual distance
+	How can I improve my communication (prepare what I'm going to say and what slides to demonstate)
+	Keep my updates short and to the point, maybe
+	     What - Problem trying to solve
+	     How - How I solved it
+	     Why - Why this approach is good
+	     What - Here's the results
+
+Optimal
+What: Answer questions:
+      Consistency of errors across localinos?
+      What's the error look like
+      	     Further characterization
+      Do we get interference on different frequencies?
+      
+How:    Can we do 2 localinos at a time?
+	8 different tests with localinos
+	write a program that requests a distance from the localino 100 times or so and averages?
+	
+Further questions:
+	Does our API allow use to switch frequencies mid program?
+
+Next steps:
+     Answer further questions
+     Add in simultaneous localization, get the range then send the data to the other guy
+     Develop an algorithm to do that 4 ways
+     Write ros nodes for interfacing with that
+     Add in synchronousness
+
+-------------------------------
+Using the Arduino Library Testings
+ - Let's analyze what the Arduino Code is doing
+ - Let's start with the ranging code since that's where the bread is
+ - Check if it works, if it doesn't where is it failing, follow the code
+    
+--> Once this works I'll want to record the accuracy, do some tests
+--> Modify the arduino code so that the Anchor also can get range data
+--> Rosnode interface and we're pretty much done
