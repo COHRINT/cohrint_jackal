@@ -6,7 +6,7 @@
 
 <group ns="$(arg robot_name)">
 
-<node name="localino_node" pkg="localino" type="localino.py" output="screen">
+<node name="localino_node" pkg="localino" type="localino_node.py" output="screen">
       <param name="robot_name" value="$(arg robot_name)" /> <!-- gotta make sure this doens't get antoher robot's name -->
 </node>
 

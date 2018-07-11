@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
 """
 
 This node serves as the interface between the traffic node and the localinos
@@ -11,34 +11,36 @@ This node serves as the interface between the traffic node and the localinos
 
 import rospy
 import sys
-
-#from localino.srv import TrafficAddName
+from localino.msg import *
 from localino.srv import *
-from std_msg.msg import UInt8
-from std_msg.msg import String
-from std_msg.msg import Float32
-from localino.msg import Instruction
-from localino.msg import Distance
+from std_msgs.msg import UInt8
+from std_msgs.msg import String
+from std_msgs.msg import Float32
+
 
 ttyStr = '/dev/localino' # udev rule (67-localino-rules) loads this
 syncCode = 's'
 
 class Localino:
 
+    localino_num = 0
+    timeout = 0
+    
     def __init__(self):
-        self.name = rospy.get_param('robot_name')
-        rospy.init_node(self.name + '_localino_node')
-        rospy.wait_for_service('add_name_traffic')
+        rospy.init_node('localino_node', anonymous=True)
+        self.name = rospy.get_param('~robot_name')
+        rospy.loginfo("Starting Localino Node: " + self.name)
+        rospy.loginfo("Waiting for Traffic Director")
+        rospy.wait_for_service('/add_name_traffic')
         try:
-            add_localino = rospy.ServiceProxy('add_name_traffic', TrafficAddName)
-            self.localino_num, self.timeout = add_localino(self.name)
-        except:
+            add_localino = rospy.ServiceProxy('/add_name_traffic', TrafficAddName)
+            res = add_localino(self.name)
+            self.localino_num = res.num
+            self.timeout = res.timeout
+            rospy.loginfo("Contacted traffic director")
+        except Exception as e:
             rospy.logerr('Could not connect to Traffic Director Server')
-            sys.exit(1)
-
-        rospy.loginfo(self.localino_num)
-        rospy.loginfo(self.timeout)
-        sys.exit(0)
+            rospy.logerr(e)
 
         self.l = serial.Serial(ttyStr, 9600, timeout=self.timeout)
         self.sync_localino()
@@ -110,7 +112,8 @@ class Localino:
         # send number to localino
 
 
-
+if __name__ == "__main__":
+    Localino()
 
 """
 

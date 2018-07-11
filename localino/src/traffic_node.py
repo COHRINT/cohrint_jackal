@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
 """
 
 This node organizes communication among the localinos.
@@ -6,18 +6,13 @@ This node organizes communication among the localinos.
 - coordinates communication among localinos
 - Contains procedures to handle one of the localinos dropping out
 
-"""
+n"""
 
 from std_msgs.msg import String
 from std_msgs.msg import UInt8
-#from localino.srv import TrafficAddName
+from localino.msg import *
 from localino.srv import *
-from localino.msg import Instruction
-
 import rospy
-import rospkg
-import roslib
-
 import itertools
 
 class Traffic_Node:
@@ -32,14 +27,14 @@ class Traffic_Node:
     def __init__(self):
 
         rospy.init_node("Traffic_Director")
-        self.localinos_timeout = rospy.get_param("localinos_timeout", 0.5)
+        self.localinos_timeout = rospy.get_param("~localinos_timeout", 0.5)
         
-        self.server = rospy.Service("add_name_traffic", TrafficAddName, self.add_localino)
+        self.server = rospy.Service("/add_name_traffic", TrafficAddName, self.add_localino)
 
         rospy.loginfo("Traffic Director Ready")
         rospy.spin()
 
-    def get_combos(num_localinos):
+    def get_combos(self, num_localinos):
         l = itertools.combinations(list(range(1,num_localinos + 1)), 2)
         combos = []
         for i in l:
@@ -60,15 +55,16 @@ class Traffic_Node:
         self.localino_combos = self.get_combos(len(self.localinos))
         self.localino_combos_index = 0 # each time restart indexing
 
-        if tag is None and len(self.localinos) is not 1: # start localization
+        if self.tag is None and len(self.localinos) is not 1: # start localization
             tag = 1
             anchor = 2
             i = Instruction()
             i.num = anchor
             i.name = self.localinos[anchor][0]
             self.localinos[tag][1].publish(i)
-        
-        return TrafficAddNameResponse(num, self.localinos_timeout) # return localino number and timeout
+
+        rospy.loginfo("Adding " + robot_name + " to known localinos")
+        return num, self.localinos_timeout # return localino number and timeout
 
     def get_new_tag_anchor():
         """
@@ -119,13 +115,3 @@ class Traffic_Node:
 
 if __name__ == "__main__":
     Traffic_Node()
-#!/usr/bin/python3
-
-import sys
-
-
-if __name__ == "__main__":
-    tag = int(sys.argv[1])
-    anchor = int(sys.argv[2])
-    size = int(sys.argv[3])
-    print(increment_tag_anchor(tag,anchor,size))
