@@ -1,0 +1,9 @@
+<!-- Launch file for the traffic ndoe -->
+
+<launch>
+
+<node name="traffic_director" pkg="localino" type="traffic_node.py" output="screen">
+      <param name="localinos_timeout" value="0.5" /> <!-- Timeout for a localino transaction -->
+</node>
+
+</launch>

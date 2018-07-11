@@ -1,16 +1,16 @@
-<!-- Launch file for localinos. Edit the default letter to correpsond to the localino -->
+<!-- Launch file for localinos -->
 
 <launch>
 
-	<arg name="name" default="case" />	 <!-- Name of the robot w/ the localino -->
-	<arg name="localinos" default="BD" /> 	 <!-- letters of all localinos in experiment -->
-	<arg name="num_meas" default="10" />	 <!-- # of packets to average out on each range measurment 
--->
-	
+	<arg name="robot_name" value="$(env ROBOT_NAME)" />	 <!-- Name of the robot w/ the localino -->
+
+<group ns="$(arg robot_name)">
 
 <node name="localino_node" pkg="localino" type="localino.py" output="screen">
-      <param name="localinos"	    value="$(arg localinos)" />
-      <param name="num_meas"	    value="$(arg num_meas)" />
+      <param name="robot_name" value="$(arg robot_name)" /> <!-- gotta make sure this doens't get antoher robot's name -->
 </node>
+
+
+</group>
 
 </launch>
