@@ -11,6 +11,7 @@ This node serves as the interface between the traffic node and the localinos
 
 import rospy
 import sys
+import serial
 from localino.msg import *
 from localino.srv import *
 from std_msgs.msg import UInt8
@@ -29,7 +30,7 @@ class Localino:
     def __init__(self):
         rospy.init_node('localino_node', anonymous=True)
         self.name = rospy.get_param('~robot_name')
-        rospy.loginfo("Starting Localino Node: " + self.name)
+        rospy.loginfo("Starting " + self.name + "'s Localino Node")
         rospy.loginfo("Waiting for Traffic Director")
         rospy.wait_for_service('/add_name_traffic')
         try:
@@ -41,12 +42,13 @@ class Localino:
         except Exception as e:
             rospy.logerr('Could not connect to Traffic Director Server')
             rospy.logerr(e)
+            sys.exit(1)
 
+        # begin communication w/ Localino
         self.l = serial.Serial(ttyStr, 9600, timeout=self.timeout)
         self.sync_localino()
+        self.l.write(chr(self.localino_num).encode()) # send the localino its number
         
-        self.l.write(self.localino_num) # send the localino its number
-
         rospy.Subscriber('instruct', Instruction, self.instruction) # should take the namespace from launch file
         self.pubComplete = rospy.Publisher('/meas_complete', String, queue_size=10)
         self.pubDist = rospy.Publisher('distances', Distance, queue_size=10)
@@ -58,7 +60,7 @@ class Localino:
         Parses the range packet from localino & returns the floating point value of the range between the localinos
         """
         try: # handle killing during communication or bad packets
-            s = self.l.read(6)
+            s = self.l.read(7)
             return float(s.decode("utf-8"))
         except:
             return 0        
@@ -66,8 +68,11 @@ class Localino:
     def instruction(self, msg):
         num = msg.num
         name = msg.name
-        
-        self.l.write(chr(num))
+        freq = msg.freq
+
+        self.reset_localino()
+        self.l.write(chr(num).encode())
+        self.l.write(ch
 
         r = self.parse_packet()
         if r == 0:
@@ -84,7 +89,7 @@ class Localino:
             ui.data = self.localino_num
             self.pubComplete(ui)
             
-        reset_localino() # localino should be in anchor state
+        self.reset_localino() # localino should be in anchor state
             
     def reset_localino(self):
         self.l.reset_input_buffer()
