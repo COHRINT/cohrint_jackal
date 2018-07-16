@@ -29,16 +29,14 @@ class Traffic_Node:
     anchor = None
     
     def __init__(self):
-
-        rospy.init_node("Traffic_Director")
-        self.traffic_timeout = rospy.get_param("~traffic_timeout", 1.0)
-        self.localinos_timeout = rospy.get_param("~localinos_timeout", 0.5)
+        
+        self.traffic_timeout = float(rospy.get_param("~traffic_timeout", 1.0))
+        self.localinos_timeout = float(rospy.get_param("~localinos_timeout", 0.5))
         
         self.server = rospy.Service("/add_name_traffic", TrafficAddName, self.add_localino)
         rospy.Subscriber('/meas_complete', String, self.increment_comm)
-
         rospy.loginfo("Traffic Director Ready")
-        rospy.spin()
+        
 
     def get_combos(self, num_localinos):
         """
@@ -51,11 +49,27 @@ class Traffic_Node:
             combos.append(( i[1], i[0] ))
         return combos
 
+    def check_existing(self, name):
+        """ If a localino already exists, returns its number """
+        print(self.localinos)
+        for i in range(1, len(self.localinos) + 1):
+            print(i)
+            if name == self.localinos[i][0]:
+                rospy.logwarn(name + " has already been added, skipping")
+                return i
+        return False
+
     def add_localino(self, req):
         """
         Record the localino's name reply with a number for its localino to use
         """
         robot_name = req.name
+
+        # check if the localino has already been added
+        existing_num = self.check_existing(robot_name)
+        if existing_num:
+            return existing_num, self.localinos_timeout
+        
         num = len(self.localinos) + 1
         topic = '/' + robot_name + '/instruct'
         pub = rospy.Publisher(topic, Instruction, queue_size=10)
@@ -69,10 +83,10 @@ class Traffic_Node:
             self.anchor = 2
             self.pub_tag_anchor()
 
-        rospy.loginfo("Adding " + robot_name + " to known localinos")
+        rospy.loginfo("Adding " + robot_name + " to known localinos.\tNum Localinos : " + str(len(self.localinos)))
         return num, self.localinos_timeout # return localino number and timeout
 
-    def get_new_tag_anchor():
+    def get_new_tag_anchor(self):
         """
         Increments by anchor first and reverses for the follwoing measurment 
         E.g. w/ 4 localinos
@@ -83,7 +97,7 @@ class Traffic_Node:
         
     def increment_comm(self, msg):
         self.timer.shutdown()
-        name = s.data
+        name = msg.data
         if name != self.tag:
             rospy.logwarn("Received an unexpected measurement from " + name)
         self.tag, self.anchor = self.get_new_tag_anchor()
@@ -99,18 +113,23 @@ class Traffic_Node:
         i.name = self.localinos[self.anchor][NAME_INDEX]
         i.freq = 1 # original frequency
         self.localinos[self.tag][PUBLISHER_INDEX].publish(i)
-        self.timer = rospy.Timer(rospy.Duration(rospy.Duration(self.traffic_timeout), self.timeout, oneshot=True)
+#        self.timer = rospy.Timer(rospy.Duration.from_sec(self.traffic_timeout),self.timeout)
+        rospy.loginfo("Instructing " + i.name)
 
     def timeout(self, msg):
         """
         Communication failed between two localinos, let's increment and warn
         - create a 2nd timeout for parallel communication
         """
-        rospy.logwarn("Communication timeout, tag: " + self.tag + " anchor: " + self.anchor)
+        tag = self.localinos[self.tag][0]
+        anchor = self.localinos[self.anchor][0]
+        rospy.logwarn("Communication timeout, \ttag : " + tag + "\tanchor : " + anchor)
         s = String()
         s.data = self.tag
         self.increment_comm(s)
 
 
 if __name__ == "__main__":
-    Traffic_Node()
+    rospy.init_node("Traffic_Director")
+    t = Traffic_Node()
+    rospy.spin()

@@ -3,7 +3,8 @@
 <launch>
 
 <node name="traffic_director" pkg="localino" type="traffic_node.py" output="screen">
-      <param name="localinos_timeout" value="0.5" /> <!-- Timeout for a localino transaction -->
+      <param name="localinos_timeout" value="1" /> <!-- Timeout for a localino transaction -->
+      <param name="traffic_timeout" value="2" />
 </node>
 
 </launch>
