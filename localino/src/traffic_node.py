@@ -51,9 +51,9 @@ class Traffic_Node:
 
     def check_existing(self, name):
         """ If a localino already exists, returns its number """
-        print(self.localinos)
+#        print(self.localinos)
         for i in range(1, len(self.localinos) + 1):
-            print(i)
+#            print(i)
             if name == self.localinos[i][0]:
                 rospy.logwarn(name + " has already been added, skipping")
                 return i
@@ -88,7 +88,7 @@ class Traffic_Node:
 
     def get_new_tag_anchor(self):
         """
-        Increments by anchor first and reverses for the follwoing measurment 
+        Increments by anchor first and reverses for the following measurment 
         E.g. w/ 4 localinos
         [1, 2], [2, 1], [1, 3], [3, 1], [1, 4], [4, 1], [2, 3], [3, 2], [2, 4] ...
         """
@@ -113,7 +113,7 @@ class Traffic_Node:
         i.name = self.localinos[self.anchor][NAME_INDEX]
         i.freq = 1 # original frequency
         self.localinos[self.tag][PUBLISHER_INDEX].publish(i)
-#        self.timer = rospy.Timer(rospy.Duration.from_sec(self.traffic_timeout),self.timeout)
+        self.timer = rospy.Timer(rospy.Duration.from_sec(self.traffic_timeout),self.timeout)
         rospy.loginfo("Instructing " + i.name)
 
     def timeout(self, msg):

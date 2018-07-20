@@ -30,29 +30,27 @@ class Localino:
 
         self.name = rospy.get_param('~robot_name')
         rospy.loginfo("Starting " + self.name + "'s Localino Node")
-        # rospy.loginfo("Waiting for Traffic Director")
-        # rospy.wait_for_service('/add_name_traffic')
-        # try:
-        #     add_localino = rospy.ServiceProxy('/add_name_traffic', TrafficAddName)
-        #     res = add_localino(self.name)
-        #     self.localino_num = res.num
-        #     self.timeout = res.timeout
-        #     rospy.loginfo("Contacted traffic director")
-        # except Exception as e:
-        #     rospy.logerr('Could not connect to Traffic Director Server')
-        #     rospy.logerr(e)
-        #     sys.exit(1)
+        rospy.loginfo("Waiting for Traffic Director")
+        rospy.wait_for_service('/add_name_traffic')
+        try:
+            add_localino = rospy.ServiceProxy('/add_name_traffic', TrafficAddName)
+            res = add_localino(self.name)
+            self.localino_num = res.num
+            self.timeout = res.timeout
+            rospy.loginfo("Contacted traffic director. My number: " + str(self.localino_num))
+        except Exception as e:
+            rospy.logerr('Could not connect to Traffic Director Server')
+            rospy.logerr(e)
+            sys.exit(1)
 
-        
-
-        self.localino_num = 1
-        self.timeout = 1.0
+        # self.localino_num = 1
+        # self.timeout = 1.0
         # Localino Serial stuff
         s = rospy.get_param('~dev') # ACM0 or ACM1
         ttyString = '/dev/tty' + s
 #        self.l = serial.Serial(ttyStr, 9600, timeout=self.timeout)
-        # self.l = serial.Serial(ttyString, 9600, timeout=self.timeout)
-        self.l = serial.Serial(ttyString, 9600)        
+        self.l = serial.Serial(ttyString, 9600, timeout=0.1) # check but don't block
+#        self.l = serial.Serial(ttyString, 9600)        
         self.sync_localino()
         self.l.write(chr(self.localino_num).encode()) # send the localino its number
         self.wait_ack()
@@ -66,18 +64,22 @@ class Localino:
         """ We could block in here... """
         while not rospy.is_shutdown():
             try:
-                c = self.l.read(1)
-                if c.decode('utf-8') == 'a':
+                c = self.l.read(1).decode('utf-8')
+                if c == 'a':
+                    c2 = self.l.read(1).decode('utf-8')
+                    rospy.loginfo("Received ack #" + str(c2))
                     break
                 elif not c:
-                    rospy.logwarn("Timed out awaiting ack from localino")
+                    rospy.logwarn("No ack from localino")
                 else:
-                    rospy.logwarn("Expecting ack from localino, received other char")
+                    rospy.logwarn("Expecting ack code from localino, received other char: " + c)
             except Exception as e:
                 rospy.logwarn(e)
-        rospy.loginfo("Received ack")
+            rospy.sleep(1)
+#        rospy.loginfo("Received ack")
 
     def parse_packet(self):
+        prev = self.l.timeout # record previous state of self.l.timeout
         self.l.timeout = None # let's block on receiving packets for now
         """ 
         Parses the range packet from localino & returns the floating point value of the range between the localinos
@@ -85,9 +87,11 @@ class Localino:
         try: # handle killing during communication or bad packets
             s = self.l.read(7)
             rospy.loginfo("Packet Contents: " + s.decode("utf-8"))
+            self.l.timeout = prev
             return float(s.decode("utf-8"))
         except Exception as e:
             rospy.logwarn(e)
+            self.l.timeout = prev            
             return -1.0
                          
     def instruction(self, msg):
@@ -99,31 +103,92 @@ class Localino:
         self.reset_localino()
         rospy.sleep(0.2)
 
+        rospy.loginfo("Sending instruction to the localino")
         self.l.write(b'i')
         self.l.write(chr(num).encode()) # tell localino who to contact
         self.l.write(chr(freq).encode()) # tell localino which frequency
         self.wait_ack()
 
-        r = self.parse_packet() # get the localino distance
-        print("range: " + str(r))
-#        set_trace()
-        if r == 0:
-            rospy.logwarn("Localino serial timeout")
-        elif r == -1:
-            rospy.logwarn("Error in communication w/ localino")
-        else: # received successful packet from localino
-            rospy.logdebug("Received packet from localino")
-            d = Distance()
-            d.toWhom = name
-            d.dist = r
-            self.pubDist.publish(d)
+        # start the local timer
+        self.timedOut = False
+        self.timer = rospy.Timer(rospy.Duration.from_sec(self.timeout),self.local_timeout)
 
-            # Inform Traffic Director we completed
-            ui = UInt8()
-            ui.data = self.localino_num
-            self.pubComplete(ui)
-            
+        if not self.interpret_localino():
+            r = self.parse_packet() # get the localino distance
+            if r > 0:
+                rospy.loginfo("range: " + str(r))
+                d = Distance()
+                d.toWhom = name
+                d.dist = r
+                self.pubDist.publish(d)
+                
+                # Inform Traffic Director we completed
+                ui = UInt8()
+                ui.data = self.localino_num
+                self.pubComplete(ui)
+            else:
+                rospy.logerr("Error in localino range packet")
+        self.l.write(b'a') # tell localino to switch back to anchor
+        self.wait_ack()
         self.reset_localino() # localino should be in anchor state
+
+    def interpret_localino(self):
+        while not rospy.is_shutdown():
+            c = self.l.read(1).decode('utf-8')
+            if c == 'p':
+                rospy.loginfo("poll sent")
+            elif c == 'o':
+                rospy.logdebuf("poll ack received")
+            elif c == 'r':
+                rospy.loginfo("range sent")
+            elif c == 'c':
+                rospy.loginfo("got the range report!")
+                self.timer.shutdown()
+                return 0
+            elif c == 't':
+                rospy.loginfo("on board localino timeout")
+            elif c == 'u':
+                c2 = self.l.read(1).decode('utf-8')
+                rospy.loginfo("unknown char: " + c2)
+                rospy.loginfo(int(c2))
+            elif c == 'R':
+                rospy.loginfo("Tag received something...")
+            elif c == 'n':
+                rospy.loginfo("Msg wasn't for me...")
+            elif c == 'N':
+                rospy.loginfo("Msg wasn't from who I thought...")
+            elif c == 'G':
+                rospy.loginfo("Msg for Me!")
+            elif c == 'l':
+                rospy.loginfo("Localino looping")
+            elif c == '5':
+                rospy.loginfo("Received weird 5 char...")
+            elif c == "M":
+                c2 = self.l.read(1).decode()
+                rospy.loginfo("Localilo thinks its # is " + c2)
+                c3 = self.l.read(1).decode()
+                rospy.loginfo("Other # is " + c3)
+            elif c == 'e': # Error localino knows about
+                self.timer.shutdown()                
+                c2 = int(self.l.read(1).decode('utf-8'))
+                rospy.logwarn("Localino Error: " + str(c2))
+                return -1
+            elif self.timedOut: # let's tell the localino to change back to anchor
+                rospy.logwarn("Received timer timeout, switching to anchor.")
+                return -2
+            elif c == '':
+                pass
+            else:
+                rospy.logerr("Received unknown response of type: " + str(type(c)))
+                rospy.logerr("info received: " + str(c))
+                
+    def local_timeout(self, msg):
+        """
+        If we don't get a response from the localino, let's 
+        """
+        self.timer.shutdown()
+        rospy.logwarn("Node Timeout waiting for localino")
+        self.timedOut = True
             
     def reset_localino(self):
         self.l.reset_input_buffer()
@@ -136,14 +201,17 @@ class Localino:
             self.reset_localino()
             try: # handle the sigterm exception 
                 self.l.write(syncCode.encode()) # send start condition
-                c = self.l.read(1) 
+                c = self.l.read(1)
+                if c == '':
+                    continue
                 ck = c.decode('utf-8') # decode the char
                 if ck == syncCode:
                     break
                 else:
-                    rospy.logdebug("Received other char from localino")
+                    rospy.loginfo("Received other char from localino: " + ck)
             except Exception as err:
                 rospy.logwarn(err)
+            rospy.sleep(1)
         rospy.loginfo("Localino Synced")
                 
 if __name__ == "__main__":
