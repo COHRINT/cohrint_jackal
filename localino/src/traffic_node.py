@@ -77,8 +77,9 @@ class Traffic_Node:
         self.localinos[num] = [ robot_name, pub ]  # key: num, value=[name, publisher]
         self.localino_combos = self.get_combos(len(self.localinos))
         self.localino_combos_index = 0 # each time restart indexing
-
-        if self.tag is None and len(self.localinos) is not 1: # start localization
+        
+        # start localization
+        if self.tag is None and len(self.localinos) is not 1:
             self.tag = 1
             self.anchor = 2
             self.pub_tag_anchor()
@@ -98,8 +99,8 @@ class Traffic_Node:
     def increment_comm(self, msg):
         self.timer.shutdown()
         name = msg.data
-        if name != self.tag:
-            rospy.logwarn("Received an unexpected measurement from " + name)
+        if name != self.localinos[self.tag][NAME_INDEX]:
+            rospy.logwarn("Received an unexpected measurement from " + str(name))
         self.tag, self.anchor = self.get_new_tag_anchor()
         self.pub_tag_anchor()
 
@@ -121,8 +122,8 @@ class Traffic_Node:
         Communication failed between two localinos, let's increment and warn
         - create a 2nd timeout for parallel communication
         """
-        tag = self.localinos[self.tag][0]
-        anchor = self.localinos[self.anchor][0]
+        tag = self.localinos[self.tag][NAME_INDEX]
+        anchor = self.localinos[self.anchor][NAME_INDEX]
         rospy.logwarn("Communication timeout, \ttag : " + tag + "\tanchor : " + anchor)
         s = String()
         s.data = self.tag

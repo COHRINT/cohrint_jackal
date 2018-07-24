@@ -53,6 +53,7 @@ class Localino:
 #        self.l = serial.Serial(ttyString, 9600)        
         self.sync_localino()
         self.l.write(chr(self.localino_num).encode()) # send the localino its number
+#        self.l.write(chr(self.localino_num + ord('0')).encode()) # send the localino its number
         self.wait_ack()
 
         rospy.Subscriber('instruct', Instruction, self.instruction) # should take the namespace from launch file
@@ -62,6 +63,7 @@ class Localino:
 
     def wait_ack(self):
         """ We could block in here... """
+        rospy.loginfo("Waiting for ack from localino...")
         while not rospy.is_shutdown():
             try:
                 c = self.l.read(1).decode('utf-8')
@@ -70,7 +72,8 @@ class Localino:
                     rospy.loginfo("Received ack #" + str(c2))
                     break
                 elif not c:
-                    rospy.logwarn("No ack from localino")
+                    pass
+#                    rospy.logwarn("No ack from localino")
                 else:
                     rospy.logwarn("Expecting ack code from localino, received other char: " + c)
             except Exception as e:
@@ -85,7 +88,7 @@ class Localino:
         Parses the range packet from localino & returns the floating point value of the range between the localinos
         """
         try: # handle killing during communication or bad packets
-            s = self.l.read(7)
+            s = self.l.read(6)
             rospy.loginfo("Packet Contents: " + s.decode("utf-8"))
             self.l.timeout = prev
             return float(s.decode("utf-8"))
@@ -96,17 +99,18 @@ class Localino:
                          
     def instruction(self, msg):
         rospy.loginfo("Received instruction from traffic director")
-        num = msg.num
+        num = int(msg.num)
         name = msg.name
-        freq = msg.freq
+        freq = int(msg.freq)
 
         self.reset_localino()
         rospy.sleep(0.2)
 
         rospy.loginfo("Sending instruction to the localino")
         self.l.write(b'i')
-        self.l.write(chr(num).encode()) # tell localino who to contact
-        self.l.write(chr(freq).encode()) # tell localino which frequency
+#        self.l.write(chr(num + ord('0')).encode()) # tell localino who to contact
+        self.l.write(chr(num).encode()) # tell localino who to contact        
+#        self.l.write(chr(freq + ord('0')).encode()) # tell localino which frequency
         self.wait_ack()
 
         # start the local timer
@@ -123,9 +127,9 @@ class Localino:
                 self.pubDist.publish(d)
                 
                 # Inform Traffic Director we completed
-                ui = UInt8()
-                ui.data = self.localino_num
-                self.pubComplete(ui)
+                s = String()
+                s.data = self.name
+                self.pubComplete.publish(s)
             else:
                 rospy.logerr("Error in localino range packet")
         self.l.write(b'a') # tell localino to switch back to anchor
@@ -138,7 +142,7 @@ class Localino:
             if c == 'p':
                 rospy.loginfo("poll sent")
             elif c == 'o':
-                rospy.logdebuf("poll ack received")
+                rospy.loginfo("poll ack received")
             elif c == 'r':
                 rospy.loginfo("range sent")
             elif c == 'c':
@@ -148,24 +152,25 @@ class Localino:
             elif c == 't':
                 rospy.loginfo("on board localino timeout")
             elif c == 'u':
-                c2 = self.l.read(1).decode('utf-8')
-                rospy.loginfo("unknown char: " + c2)
-                rospy.loginfo(int(c2))
+                rospy.loginfo("unknown char..")
             elif c == 'R':
                 rospy.loginfo("Tag received something...")
             elif c == 'n':
                 rospy.loginfo("Msg wasn't for me...")
             elif c == 'N':
                 rospy.loginfo("Msg wasn't from who I thought...")
+                other_num = self.l.read(1).decode()
+                sender = self.l.read(1).decode()
+                rospy.loginfo("O.N. : " + other_num + " sender : " + sender)
             elif c == 'G':
-                rospy.loginfo("Msg for Me!")
+                rospy.loginfo("Msg for Me! And from whom I thought.")
             elif c == 'l':
                 rospy.loginfo("Localino looping")
-            elif c == '5':
-                rospy.loginfo("Received weird 5 char...")
+            elif c in ['0','1','2','3','4','5','6','7','8','9']:
+                rospy.loginfo("Received a # char..." + c)
             elif c == "M":
                 c2 = self.l.read(1).decode()
-                rospy.loginfo("Localilo thinks its # is " + c2)
+                rospy.loginfo("Localino thinks its # is " + c2)
                 c3 = self.l.read(1).decode()
                 rospy.loginfo("Other # is " + c3)
             elif c == 'e': # Error localino knows about
@@ -174,7 +179,7 @@ class Localino:
                 rospy.logwarn("Localino Error: " + str(c2))
                 return -1
             elif self.timedOut: # let's tell the localino to change back to anchor
-                rospy.logwarn("Received timer timeout, switching to anchor.")
+#                rospy.logwarn("Received timer timeout, switching to anchor.")
                 return -2
             elif c == '':
                 pass
@@ -218,8 +223,3 @@ if __name__ == "__main__":
     rospy.init_node('localino_node', anonymous=True)
     l = Localino()
     rospy.spin()
-"""
-
-When we contact a localino, we want to include: address and return address
-
-"""
