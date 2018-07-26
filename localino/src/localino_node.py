@@ -53,7 +53,6 @@ class Localino:
 #        self.l = serial.Serial(ttyString, 9600)        
         self.sync_localino()
         self.l.write(chr(self.localino_num).encode()) # send the localino its number
-#        self.l.write(chr(self.localino_num + ord('0')).encode()) # send the localino its number
         self.wait_ack()
 
         rospy.Subscriber('instruct', Instruction, self.instruction) # should take the namespace from launch file
@@ -158,7 +157,7 @@ class Localino:
             elif c == 'n':
                 rospy.loginfo("Msg wasn't for me...")
             elif c == 'N':
-                rospy.loginfo("Msg wasn't from who I thought...")
+                rospy.logwarn("Msg wasn't from who I thought...")
                 other_num = self.l.read(1).decode()
                 sender = self.l.read(1).decode()
                 rospy.loginfo("O.N. : " + other_num + " sender : " + sender)
