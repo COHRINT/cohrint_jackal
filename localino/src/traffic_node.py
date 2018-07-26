@@ -47,6 +47,7 @@ class Traffic_Node:
         for i in l:
             combos.append(i)
             combos.append(( i[1], i[0] ))
+        print(list(combos))
         return combos
 
     def check_existing(self, name):
@@ -76,7 +77,8 @@ class Traffic_Node:
         
         self.localinos[num] = [ robot_name, pub ]  # key: num, value=[name, publisher]
         self.localino_combos = self.get_combos(len(self.localinos))
-        self.localino_combos_index = 0 # each time restart indexing
+        self.localino_combos_index = -1 # each time restart indexing
+        rospy.loginfo("Adding " + robot_name + " to known localinos.\tNum Localinos : " + str(len(self.localinos)))
         
         # start localization
         if self.tag is None and len(self.localinos) is not 1:
@@ -84,7 +86,6 @@ class Traffic_Node:
             self.anchor = 2
             self.pub_tag_anchor()
 
-        rospy.loginfo("Adding " + robot_name + " to known localinos.\tNum Localinos : " + str(len(self.localinos)))
         return num, self.localinos_timeout # return localino number and timeout
 
     def get_new_tag_anchor(self):
@@ -93,7 +94,7 @@ class Traffic_Node:
         E.g. w/ 4 localinos
         [1, 2], [2, 1], [1, 3], [3, 1], [1, 4], [4, 1], [2, 3], [3, 2], [2, 4] ...
         """
-        self.localino_combos_index = ( self.localino_combos_index + 1) % len(self.localinos) # increment the index
+        self.localino_combos_index = ( self.localino_combos_index + 1) % len(self.localino_combos) # increment the index
         return self.localino_combos[self.localino_combos_index]
         
     def increment_comm(self, msg):
@@ -115,18 +116,26 @@ class Traffic_Node:
         i.freq = 1 # original frequency
         self.localinos[self.tag][PUBLISHER_INDEX].publish(i)
         self.timer = rospy.Timer(rospy.Duration.from_sec(self.traffic_timeout),self.timeout)
-        rospy.loginfo("Instructing " + i.name)
+        
+        tag = self.localinos[self.tag][NAME_INDEX]
+        tagNum = str(self.tag)
+        anchor = i.name
+        anchorNum = str(self.anchor)
+        rospy.loginfo("Instructing " + tag + "(" + tagNum + ") to contact " + anchor + "(" + anchorNum + ")")
 
     def timeout(self, msg):
         """
         Communication failed between two localinos, let's increment and warn
         - create a 2nd timeout for parallel communication
         """
+        # print to screen localinos that failed to contact
         tag = self.localinos[self.tag][NAME_INDEX]
         anchor = self.localinos[self.anchor][NAME_INDEX]
         rospy.logwarn("Communication timeout, \ttag : " + tag + "\tanchor : " + anchor)
+
+        # increment to the next comm pair
         s = String()
-        s.data = self.tag
+        s.data = self.localinos[self.tag][NAME_INDEX]
         self.increment_comm(s)
 
 
