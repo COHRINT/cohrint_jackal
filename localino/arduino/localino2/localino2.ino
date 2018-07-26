@@ -22,8 +22,6 @@ volatile byte expectedMsgId;
 // message sent/received state
 volatile boolean sentAck = false;
 volatile boolean receivedAck = false;
-// protocol error state
-boolean protocolFailed = false;
 // timestamps to remember
 DW1000Time timePollSent;
 DW1000Time timePollReceived;
@@ -326,13 +324,13 @@ int8_t checkReceiver() {
   
   if (forWho != MY_NUM) {
     Serial.print('n');
-    return -1;
+    return 1;
   }
   else if (fromWhom != OTHER_NUM) {
     Serial.print('N');
     Serial.print(OTHER_NUM);
     Serial.print(fromWhom);
-    return -1;
+    return 2;
   }
   else {
     Serial.print('G');
@@ -396,11 +394,6 @@ int8_t handleSerial() {
 	Serial.print(OTHER_NUM);
 	Serial.print('_');
 	Serial.print(MY_NUM);
-	
-	// test if I'm understanding this right...
-	if ( ( OTHER_NUM == 25 ) && ( MY_NUM == 51) )
-	  Serial.print('Y');
-	
 	freezeError(2);
 	/* becomeAnchor(); */
 	/* reply_ack(7); */
@@ -599,7 +592,6 @@ void loop_anchor() {
     }
     if (msgId == POLL) {
       // on POLL we (re-)start, so no protocol failure
-      protocolFailed = false;
       DW1000.getReceiveTimestamp(timePollReceived);
       expectedMsgId = RANGE;
       transmitPollAck();
@@ -609,16 +601,15 @@ void loop_anchor() {
     else if (msgId == RANGE) {
       DW1000.getReceiveTimestamp(timeRangeReceived);
       expectedMsgId = POLL;
-      if (!protocolFailed) {
-	timePollSent.setTimestamp(data + 1);
-	timePollAckReceived.setTimestamp(data + 6);
-	timeRangeSent.setTimestamp(data + 11);
-	// (re-)compute range as two-way ranging is done
-	computeRangeAsymmetric(); // CHOSEN RANGING ALGORITHM
-	float distance = timeComputedRange.getAsMeters();
-	transmitRangeReport(distance);
-	noteActivity();	// update sampling rate (each second)
-      }
+      timePollSent.setTimestamp(data + 1);
+      timePollAckReceived.setTimestamp(data + 6);
+      timeRangeSent.setTimestamp(data + 11);
+      // (re-)compute range as two-way ranging is done
+      computeRangeAsymmetric(); // CHOSEN RANGING ALGORITHM
+      float distance = timeComputedRange.getAsMeters();
+      transmitRangeReport(distance);
+      noteActivity();	// update sampling rate (each second)
+      OTHER_NUM = 0;
     }
   }
 }
