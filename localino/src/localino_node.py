@@ -49,7 +49,7 @@ class Localino:
         s = rospy.get_param('~dev') # ACM0 or ACM1
         ttyString = '/dev/tty' + s
 #        self.l = serial.Serial(ttyStr, 9600, timeout=self.timeout)
-        self.l = serial.Serial(ttyString, 9600, timeout=0.1) # check but don't block
+        self.l = serial.Serial(ttyString, 9600, timeout=0.1, write_timeout=0.1) # check but don't block
 #        self.l = serial.Serial(ttyString, 9600)        
         self.sync_localino()
         self.l.write(chr(self.localino_num).encode()) # send the localino its number
@@ -63,6 +63,9 @@ class Localino:
     def wait_ack(self):
         """ We could block in here... """
         rospy.loginfo("Waiting for ack from localino...")
+        resets = 0
+        delayTime = 0.5
+        rospy.sleep(delayTime / 2)
         while not rospy.is_shutdown():
             try:
                 c = self.l.read(1).decode('utf-8')
@@ -71,13 +74,18 @@ class Localino:
                     rospy.loginfo("Received ack #" + str(c2))
                     break
                 elif not c:
-                    pass
-#                    rospy.logwarn("No ack from localino")
+                    rospy.logwarn("No ack from localino")
+                    resets += 1
+                    rospy.sleep(delayTime)
                 else:
                     rospy.logwarn("Expecting ack code from localino, received other char: " + c)
+                if ( resets * delayTime ) > self.timeout :
+                    rospy.warn("Timed out waiting for ack, resetting")
+                    return 1
             except Exception as e:
                 rospy.logwarn(e)
-            rospy.sleep(1)
+            rospy.sleep(delayTime)
+            return 0
 #        rospy.loginfo("Received ack")
 
     def parse_packet(self):
@@ -106,11 +114,18 @@ class Localino:
         rospy.sleep(0.2)
 
         rospy.loginfo("Sending instruction to the localino")
-        self.l.write(b'i')
-#        self.l.write(chr(num + ord('0')).encode()) # tell localino who to contact
-        self.l.write(chr(num).encode()) # tell localino who to contact        
-#        self.l.write(chr(freq + ord('0')).encode()) # tell localino which frequency
-        self.wait_ack()
+        try:
+            self.l.write(b'i') # send localino instruction char 
+            self.l.write(chr(num).encode()) # send number of who to contact
+        except SerialTimeoutException as e:
+            rospy.logwarn(e)
+            self.reset_localino() # localino should be in anchor state
+            self.l.write(b'a') # tell localino to switch back to anchor
+            self.wait_ack()
+            return
+        
+        if self.wait_ack():
+            return
 
         # start the local timer
         self.timedOut = False
