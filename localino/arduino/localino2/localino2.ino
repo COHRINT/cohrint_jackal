@@ -317,16 +317,13 @@ int8_t checkReceiver() {
   byte forWho = data[16];
   byte fromWhom = data[17];
 
-  if ( ( OTHER_NUM == 0 ) && ( expectedMsgId == POLL) ) { // let's talk to a new localino
+  if (forWho != MY_NUM) {
+    //    Serial.print('n');
+    return 1;
+  } else if ( ( OTHER_NUM == 0 ) && ( expectedMsgId == POLL) ) { // let's talk to a new localino
     OTHER_NUM = fromWhom;
     return 0; 
-  }
-  
-  if (forWho != MY_NUM) {
-    Serial.print('n');
-    return 1;
-  }
-  else if (fromWhom != OTHER_NUM) {
+  } else if (fromWhom != OTHER_NUM) {
     Serial.print('N');
     Serial.print(OTHER_NUM);
     Serial.print(fromWhom);
