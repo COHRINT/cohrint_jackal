@@ -7,7 +7,7 @@
 
 // connection pins
 const uint8_t PIN_RST = 9; // reset pin
-const uint8_t PIN_IRQ = 3; // irq pin
+const uint8_t PIN_IRQ = 1; // irq pin
 const uint8_t PIN_SS = SS; // spi select pin
 
 // messages used in the ranging protocol
@@ -37,8 +37,10 @@ byte data[LEN_DATA];
 // watchdog and reset period
 uint32_t lastActivity;
 uint32_t resetPeriod = 250;
-uint8_t maxNumTimeouts = 4; // wait this number of timeouts if switching frequencies before switching back
+
+uint8_t maxNumTimeouts = 10; // wait this number of timeouts if switching frequencies before switching back
 uint8_t numTimeouts = 0;
+
 // reply times (same on both sides for symm. ranging)
 uint16_t replyDelayTimeUS = 3000;
 // ranging counter (per second)
@@ -50,8 +52,7 @@ float samplingRate = 0;
 uint8_t my_number = 2; // 1 indicates it'll start as master (or a tag)
 char syncCode = 's';
 char instructionCode = 'i';
-uint16_t trans_num = 0;
-const uint16_t transition_delay = 0;
+
 uint8_t msg_sent = 0;
 uint8_t my_freq = 1;
 uint8_t switchedFreq = 0;
@@ -105,6 +106,7 @@ void becomeTag() {
   receiver();
   transmitPoll();
   noteActivity();
+  numTimeouts = 0;
 }
 
 void becomeAnchor() { // can I move the bulk of this to just the initializing state ?
@@ -219,9 +221,14 @@ void resetInactive() {
 
     // didn't receive a msg
     else {
+      numTimeouts++;
+      if (numTimeouts > maxNumTimeouts) {
+	becomeAnchor();
+      } else {
       Serial.print('t');
       expectedMsgId = POLL_ACK;
       transmitPoll();
+      }
     }
   }
   noteActivity();
@@ -247,6 +254,7 @@ void transmitPoll() {
     
     DW1000.setData(data, LEN_DATA);
     DW1000.startTransmit();
+    noteActivity();
 }
 
 void transmitPollAck() {
@@ -262,6 +270,7 @@ void transmitPollAck() {
   DW1000.setDelay(deltaTime);
   DW1000.setData(data, LEN_DATA);
   DW1000.startTransmit();
+  noteActivity();
 }
 
 void transmitRange() {
@@ -281,6 +290,7 @@ void transmitRange() {
   DW1000.setData(data, LEN_DATA);
   DW1000.startTransmit();
     //Serial.print("Expect RANGE to be sent @ "); Serial.println(timeRangeSent.getAsFloat());
+  noteActivity();
 }
 
 void transmitRangeReport(float curRange) {
@@ -293,6 +303,7 @@ void transmitRangeReport(float curRange) {
   memcpy(data + 1, &curRange, 4);
   DW1000.setData(data, LEN_DATA);
   DW1000.startTransmit();
+  noteActivity();
 }
 
 void getAddress(byte the_data[]) {
@@ -341,6 +352,7 @@ void receiver() {
     // so we don't need to restart the receiver manually
     DW1000.receivePermanently(true);
     DW1000.startReceive();
+    noteActivity();
 }
 
 int8_t handleSerial() {
@@ -381,6 +393,7 @@ int8_t handleSerial() {
 	Serial.print(MY_NUM);
 	Serial.print(OTHER_NUM);
 	becomeTag();
+	return 1;
       } else { // we are receiving something on another frequency
 	// for now this is an error
 	Serial.print('y');
