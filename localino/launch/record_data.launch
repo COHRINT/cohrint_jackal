@@ -1,0 +1,15 @@
+<!-- Launch file to record data of a localino pair's measurements into a CSV file -->
+
+<launch>
+
+	<arg name="loc1" />
+	<arg name="loc2" />
+	<arg name="numMeas" default="50" /> 
+
+<node name="record_node" pkg="localino" type="record_localinos.py" output="screen">
+      <param name="loc1" value="$(arg loc1)" />
+      <param name="loc2" value="$(arg loc2)" />
+      <param name="numMeas" value="$(arg numMeas)" /> 
+</node>
+
+</launch>
