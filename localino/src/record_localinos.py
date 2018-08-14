@@ -63,6 +63,7 @@ class Recorder():
         self.recording2 = True
         self.numMeas1 = 0
         self.numMeas2 = 0
+        rospy.loginfo("Recording distance: " + str(self.curDist))
 
     def distCallback1(self, msg):
         if msg.toWhom != self.localino2: # check if this was a measurement of localino 2
@@ -70,12 +71,13 @@ class Recorder():
         elif not self.recording1 : # ignore the msg
             pass
         else:
-            rospy.loginfo("Recording " + self.localino1)
+            rospy.loginfo(self.localino1 + " (" + str(self.numMeas1) + "/" + str(self.numMeas) + ")")
             self.meas1.append(msg.dist)
             self.distances.append(self.curDist)
             self.numMeas1 += 1
-            if self.numMeas1 > self.numMeas :
+            if self.numMeas1 >= self.numMeas :
                 self.recording1 = False
+                rospy.logwarn("All finished w/ " + self.localino1)
 
     def distCallback2(self, msg):
         if msg.toWhom != self.localino1: # check if this was a measurement of localino 1
@@ -83,28 +85,30 @@ class Recorder():
         elif not self.recording2 : # ignore the msg
             pass
         else:
-            rospy.loginfo("Recording " + self.localino2)
+            rospy.loginfo(self.localino2 + " (" + str(self.numMeas2) + "/" + str(self.numMeas) + ")")
             self.meas2.append(msg.dist)
             self.numMeas2 += 1
-            if self.numMeas2 > self.numMeas :
+            if self.numMeas2 >= self.numMeas : # we've reached the amount
                 self.recording2 = False
+                rospy.logwarn("All finished w/ " + self.localino2)
 
 if __name__ == "__main__":
     rospy.init_node('localino_recorder')
-
+    
     # load params
     localinoName1 = rospy.get_param('~loc1')
     localinoName2 = rospy.get_param('~loc2')
     numMeas = int(rospy.get_param('~numMeas'))
     
     r = Recorder(localinoName1, localinoName2, numMeas)
+    rospy.loginfo("Starting localino recording node")
     rospy.spin()
-    print("reached here")
-    print(str(r.distances))
-    print(str(r.meas1))
-    print(str(r.meas2))
+    # print("reached here")
+    # print(str(r.distances))
+    # print(str(r.meas1))
+    # print(str(r.meas2))
     newList = list(zip(r.distances, r.meas1, r.meas2))
-    print(newList)
+#    print(newList)
     fileName = localinoName1 + '_' + localinoName2 + '.csv'
     print(fileName)
     with open(fileName, "w+") as data:

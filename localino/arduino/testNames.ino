@@ -1,4 +1,4 @@
-/*p
+/*
   Cycle through all channels 1-7 (!6) after distance calcuation and switch who's the tag and anchor
  */
 
@@ -34,13 +34,11 @@ DW1000Time timeRangeReceived;
 // last computed range/time
 DW1000Time timeComputedRange;
 // data buffer
-#define LEN_DATA 18 // last two bytes are [to who, from who]
+#define LEN_DATA 18
 byte data[LEN_DATA];
 // watchdog and reset period
 uint32_t lastActivity;
 uint32_t resetPeriod = 250;
-uint8_t maxNumTimeouts = 4; // wait this number of timeouts if switching frequencies before switching back
-uint8_t numTimeouts = 0;
 // reply times (same on both sides for symm. ranging)
 uint16_t replyDelayTimeUS = 3000;
 // ranging counter (per second)
@@ -51,35 +49,45 @@ float samplingRate = 0;
 // Special Protocol Stuff
 uint8_t my_number = 2; // 1 indicates it'll start as master (or a tag)
 char syncCode = 's';
-char instructionCode = 'i';
 uint16_t trans_num = 0;
 const uint16_t transition_delay = 100;
 uint8_t msg_sent = 0;
-uint8_t my_freq = 1;
-uint8_t switchedFreq = 0;
-
-byte MY_NUM = 0;
-byte OTHER_NUM = 0;
-byte FREQUENCY = 1;
 
 typedef enum State_t {
   TAG = 0,
   ANCHOR = 1
 } State;
 
+uint8_t MY_NUM = 0;
+uint8_t OTHER_NUM = 0;
+
 State my_state;
 
 void setup() {
     Serial.begin(9600);
-    delay(0.5);
+    syncPC();
+
+    initDW1000();    
     
-    // possibly move this b/c it's also taken care of below...
-    /* syncPC(); */
-    /* getLocalinoNumber(); */
-    /* reply_ack(); */
+    my_state = chooseStartingState( my_number );
     
-    initDW1000();
-    becomeAnchor(); // start as anchor
+    if (my_state == TAG) {
+      MY_NUM = 1;
+      OTHER_NUM = 2;
+    }
+    else{
+	MY_NUM = 2;
+	OTHER_NUM = 3;
+      }
+    // decide to start as tag or anchor
+    switch( my_state ) {
+    case TAG:
+      becomeTag();
+      break;
+    case ANCHOR:
+      becomeAnchor();
+      break;
+    }
 }
 
 void initDW1000() {
@@ -87,15 +95,32 @@ void initDW1000() {
   DW1000.begin(PIN_IRQ, PIN_RST);
   DW1000.select(PIN_SS);
   // general configuration
-  if ( setDW(FREQUENCY) ) freezeError(13);
+  DW1000.newConfiguration();
+ 
+  DW1000.setDefaults(); // we'll change this to dyanimically take a channel
+  
+  DW1000.setDeviceAddress(my_number);
+  DW1000.setNetworkId(10);
+  DW1000.enableMode(DW1000.MODE_LONGDATA_RANGE_ACCURACY, 1);
+  DW1000.commitConfiguration();
   // attach callback for (successfully) sent and received messages
   DW1000.attachSentHandler(handleSent);
   DW1000.attachReceivedHandler(handleReceived);
 }
 
+void print_trans_num()
+{
+  Serial.print("\r(");
+  Serial.print(trans_num);
+  Serial.print(") ");
+
+}
+
 void becomeTag() {
   msg_sent = 1;
-  //  Serial.println("------------TAG-----------");
+  trans_num += 1;
+  print_trans_num();
+  Serial.println("------------TAG-----------");
   delay(transition_delay);
   my_state = TAG;
   // transmit a poll msg
@@ -107,7 +132,9 @@ void becomeTag() {
 
 void becomeAnchor() { // can I move the bulk of this to just the initializing state ?
   msg_sent = 1;
-  //  Serial.println("----------ANCHOR----------");
+  trans_num += 1;
+  print_trans_num();
+  Serial.println("----------ANCHOR----------");
   delay(transition_delay);
   my_state = ANCHOR;
   // wait for a poll msg
@@ -118,37 +145,6 @@ void becomeAnchor() { // can I move the bulk of this to just the initializing st
   rangingCountPeriod = millis();
 }
 
-int8_t setDW(byte freq) {
-  if ( !freq || freq > 7 || freq == 6 ) // check for invalid frequency
-    return -1;
-  my_freq = freq; // only time we modify is when we actually change
-  //  Serial.print("\rSetting freq = "); Serial.println(freq);
-  DW1000.newConfiguration();
-  DW1000.setDefaults(); // we'll change this to dyanimically take a 
-  DW1000.setDeviceAddress(my_number);
-  DW1000.setNetworkId(10);
-  DW1000.enableMode(DW1000.MODE_LONGDATA_RANGE_ACCURACY, freq);
-  DW1000.commitConfiguration();
-  return 0;
-}
-
-/*
-  Receive Localino's number from the computer
- */
-void getLocalinoNumber() {
-  delay(250); // let serial intialize in case it hasn't
-  char myNumber = 'a';
-  while(true) { // block on getting number
-    if (Serial.available() > 0) { // check if data available
-      myNumber = Serial.read();
-      if (myNumber != 0) { // check if we got the go ahead character
-	break; // we received our number
-      }
-    }
-  }
-  MY_NUM = (byte) myNumber;
-}
-
 /*
   Gets in sync with the PC,
   First receive a char from the PC
@@ -156,6 +152,7 @@ void getLocalinoNumber() {
  */
 void syncPC() {
   delay(250); // let serial intialize in case it hasn't
+  Serial.println("\rSyncing");
   char in = 'a';
   while(true) { // block on syncing 
     if (Serial.available() > 0) { // check if data available
@@ -168,14 +165,21 @@ void syncPC() {
   }
 }
 
+State chooseStartingState(uint8_t num) {
+  if ( num == 1 ) // we'll start as a tag/the master
+    return TAG;
+  else
+    return ANCHOR;
+}
+
 void noteActivity() {
     // update activity timestamp, so that we do not reach "resetPeriod"
     lastActivity = millis();
 }
 
 void freezeError(uint8_t num) {
-  Serial.print("e ");
-  Serial.print(num);
+  Serial.print("Error ");
+  Serial.println(num);
   while(1);
 }
 
@@ -195,7 +199,7 @@ void resetInactive() {
 
     // didn't receive a message
     else if (expectedMsgId == POLL) {
-      receiver();
+	receiver();
     }
     else if (expectedMsgId == RANGE) {
 	transmitPollAck();
@@ -289,6 +293,12 @@ void transmitRange() {
     //Serial.print("Expect RANGE to be sent @ "); Serial.println(timeRangeSent.getAsFloat());
 }
 
+void getAddress(byte the_data[]) {
+  memset(the_data, 0, 2);
+  the_data[0] = (byte) OTHER_NUM; // who's it for
+  the_data[1] = (byte) MY_NUM; // return address
+}
+
 void transmitRangeReport(float curRange) {
   DW1000.newTransmit();
   DW1000.setDefaults();
@@ -301,48 +311,23 @@ void transmitRangeReport(float curRange) {
   DW1000.startTransmit();
 }
 
-void getAddress(byte the_data[]) {
-  memset(the_data, 0, 2);
-  the_data[0] = (byte) OTHER_NUM; // who's it for
-  the_data[1] = (byte) MY_NUM; // return address
-}
-
-// we want to always send 7 digits to the msi
-void print2msi(float distance) {
-  if (distance > 1000 || distance < 0) // handle errors
-    return;
-  
-  uint8_t zeros = 0;
-  if (distance < 100)
-    Serial.print('0');
-  if (distance < 10)
-    Serial.print('0');
-  Serial.print(distance);
-}
-
-int8_t checkReceiver() {
-  byte receiver = data[16];
-  byte sender = data[17];
-
-  if (OTHER_NUM == 0 && expectedMsgId == POLL) { // let's talk to a new localino
-    OTHER_NUM = receiver;
-    return 0; 
-  }
-  
-  if (receiver != MY_NUM)
-    return -1;
-  else if (sender != OTHER_NUM)
-    return -1;
-  else
-    return 0;
-}
-
 void receiver() {
     DW1000.newReceive();
     DW1000.setDefaults();
     // so we don't need to restart the receiver manually
     DW1000.receivePermanently(true);
     DW1000.startReceive();
+}
+
+int8_t checkReceiver() {
+  byte receiver = data[16];
+  byte sender = data[17];
+  if (receiver != MY_NUM)
+    return -1;
+  else if (sender != OTHER_NUM)
+    return -1;
+  else
+    return 0;
 }
 
 /*
@@ -381,9 +366,8 @@ void computeRangeSymmetric() {
  * ----------------------
  */
 
-
- void loop() {
-   switch( my_state ) {
+void loop() {
+    switch( my_state ) {
     case TAG:
       loop_tag();
       break;
@@ -392,7 +376,6 @@ void computeRangeSymmetric() {
       break;
     }
 }
-
 
 void loop_tag() {
   //  Serial.println("Looping Tag\r");
@@ -439,61 +422,27 @@ void loop_tag() {
       expectedMsgId = RANGE_REPORT;
       transmitRange();      
       noteActivity();
-      //      Serial.println("POLL_ACK");
+      print_trans_num();
+      Serial.println("POLL_ACK");
     } else if (msgId == RANGE_REPORT) {
-      //      Serial.print("RANGE REPORT: ");
+      print_trans_num();
+      Serial.print("RANGE REPORT: ");
       expectedMsgId = POLL_ACK;
       float curRange;
       memcpy(&curRange, data + 1, 4);
-      print2msi(curRange); // send the range to the msi
-      becomeAnchor(); // we got the distance !!
+      Serial.println(curRange);
       noteActivity();
+      transmitPoll();
       }
     else
       freezeError(9);
     }
   }
 
-int8_t check_reset(char in) {
-  if (in == syncCode)
-    return 1;
-  else
-    return 0;
-}
-
-/* inform msi computer that we've received the instruction */
-void reply_ack() {
-  Serial.write('a');
-}
 
 /* ################################################################### */
 
 void loop_anchor() {
-  char in = 'a';
-  // should I contact someone?
-  if (Serial.available() > 0) {
-    in = Serial.read();
-    int8_t res = check_reset(in);
-    if ( res ) { // we got a sync code
-      Serial.write(syncCode); // reply
-      getLocalinoNumber();
-      reply_ack();
-    } else {  // we got an instruction
-      OTHER_NUM = (byte) Serial.read(); // in was the localino number to contact
-      FREQUENCY = (byte) Serial.read();
-      reply_ack();
-    }
-
-    setDW(FREQUENCY);
-    if (OTHER_NUM != MY_NUM){ // we should be an anchor on this frequency
-      becomeTag();
-    } else {
-      OTHER_NUM = 0;
-      expectedMsgId = POLL;
-    }
-    return;
-  } // end serial.available
-
   int32_t curMillis = millis(); 
   if (!sentAck && !receivedAck) {
     // check if inactive
@@ -502,7 +451,6 @@ void loop_anchor() {
     }
     return;
   }
-
   // continue on any success confirmation
   if (sentAck) {
     sentAck = false;
@@ -512,7 +460,7 @@ void loop_anchor() {
       DW1000.getTransmitTimestamp(timePollAckSent);
     }
     else if (msgId == RANGE_REPORT) {
-      OTHER_NUM = 0; // open it up to listen to anyone
+      ;
     }
     else
       freezeError(8);
@@ -541,7 +489,7 @@ void loop_anchor() {
       expectedMsgId = RANGE;
       transmitPollAck();
       noteActivity();
-      //      Serial.println("\rPOLL");
+      Serial.println("\rPOLL");
     }
     else if (msgId == RANGE) {
       DW1000.getReceiveTimestamp(timeRangeReceived);
@@ -554,6 +502,8 @@ void loop_anchor() {
 	computeRangeAsymmetric(); // CHOSEN RANGING ALGORITHM
 	float distance = timeComputedRange.getAsMeters();
 	transmitRangeReport(distance);
+	print_trans_num();
+	Serial.print("\rRange: "); Serial.println(distance);
 	noteActivity();	// update sampling rate (each second)
       }
     }
