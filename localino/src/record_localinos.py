@@ -18,7 +18,6 @@ import rospy
 import csv
 from localino.msg import Distance
 from std_msgs.msg import UInt8
-# graceful killer here
 
 class Recorder():
 
