@@ -33,8 +33,6 @@ Move the decawave farther away until packet integrity diminishes
 #include <SPI.h>
 #include <DW1000.h>
 
-#include <math.h>
-
 // connection pins
 const uint8_t PIN_RST = 9; // reset pin
 const uint8_t PIN_IRQ = 3; // irq pin for special configuration
@@ -55,7 +53,7 @@ void setup() {
   while( c != 's'){
     c = Serial.read();
   }
-  Serial.println('s');
+  Serial.print('s');
   // initialize the driver
   DW1000.begin(PIN_IRQ, PIN_RST);
   DW1000.select(PIN_SS);
@@ -94,20 +92,41 @@ void receiver() {
   DW1000.startReceive();
 }
 
+float get_abs(float num) {
+  if (num < 0 )
+    return -num;
+   else
+    return num;
+}
+
+String getString(float num) {
+  String str;
+  if ( num < 100 ) {
+    str += '0';
+  }
+  str += String(num);
+  return str;
+}
+
 void loop() {
   // enter on confirmation of ISR status change (successfully received)
   if (received) {
     //    numReceived++;
     // get data as string
     DW1000.getData(message);
+    Serial.print('*');
 
     // all in dBm
-    float fppower = fabs( DW1000.getFirstPathPower() );
-    float rxpower = fabs( DW1000.getReceivePower() );
-    float sig_q = fabs( DW1000.getReceiveQuality() );
-        
-    Serial.print(DW1000.getReceivePower()); Serial.print("|");
-    Serial.println(DW1000.getReceiveQuality()); Serial.print("*");
+    float fppower = get_abs( DW1000.getFirstPathPower() );
+    float rxpower = get_abs( DW1000.getReceivePower() );
+    float sig_q = get_abs( DW1000.getReceiveQuality() );
+
+    Serial.print( getString( fppower ) ); Serial.print('|');
+    Serial.print( getString( rxpower ) ); Serial.print('|');
+    Serial.print( getString( sig_q ) ); Serial.print('|');
+     
+//    Serial.print(DW1000.getReceivePower()); Serial.print("|");
+//    Serial.println(DW1000.getReceiveQuality()); Serial.print("*");
     
     // Serial.print("Received message ... #"); Serial.println(numReceived);
     //Serial.print("Data is ... "); Serial.println(message);

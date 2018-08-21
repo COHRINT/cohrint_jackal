@@ -13,9 +13,11 @@ import serial
 import rospy
 import csv
 
+from geometry_msgs.msg import TransformStamped
+
 syncCode = 's'
 
-testType = 'vert_vert'
+testType = 'hor_hor'
 
 # Credits Mayank Jaiswal
 class GracefulKiller:
@@ -27,16 +29,16 @@ class GracefulKiller:
     def exit_gracefully(self,signum, frame):
         self.kill_now = True
 
-def reset_localino():
-    self.l.reset_input_buffer()
-    self.l.reset_output_buffer()
+def reset_localino(loc):
+    loc.reset_input_buffer()
+    loc.reset_output_buffer()
 
     # sync with the localino
-def sync_localino(loc):
+def sync_localino(loc, g):
     """ Syncs w/ the localino """
     rospy.loginfo("Attempting to sync with localino")
-    while not rospy.is_shutdown():
-        reset_localino()
+    while not rospy.is_shutdown() and not g.kill_now:
+        reset_localino(loc)
         try: # handle the sigterm exception 
             loc.write(syncCode.encode()) # send start condition
             c = loc.read(1)
@@ -53,11 +55,24 @@ def sync_localino(loc):
     rospy.loginfo("Localino Synced")
 
 def read_packet(loc):
+    print("reading packet")
+    c = 'a';
+    while c != '*' :
+        reset_localino(loc)
+        rospy.sleep( 0.25 )
+        c = loc.read(1).decode('utf-8')
+    print('first char')
     fp_power = float(loc.read(6).decode('utf-8'))
+    c1 = loc.read(1).decode('utf-8')
+    print('fp_power')
     rx_power = float(loc.read(6).decode('utf-8'))
+    c2 = loc.read(1).decode('utf-8')
+    print('rx_power')
     sig_quality = float(loc.read(6).decode('utf-8'))
+    c3 = loc.read(1).decode('utf-8')
+    print('sig_quality')
 
-    return [-fp_power, -rx_power, sig_quality]
+    return ( -fp_power, -rx_power, sig_quality )
 
 def decompose_transform_msg(msg):
     """
@@ -92,7 +107,7 @@ if __name__ == "__main__":
     ttyStr = '/dev/localino'
     localino = serial.Serial(ttyStr, 9600)
 
-    topic = '/wand/base_footprint'
+    topic = '/Wand/base_footprint'
 
     # init graceful killer
     gKill = GracefulKiller()
@@ -108,8 +123,11 @@ if __name__ == "__main__":
     pose = [0,0,0]
     intensity = 92
 
-    sync_loclaino(localino)
+    rospy.loginfo("waiting for topic")
+    msg = rospy.wait_for_message(topic, TransformStamped)
+    sync_localino(localino, gKill)
     packet = [0,0,0] # FP power, rx popwer, signal quality
+    num = 0
     # loop
     while not gKill.kill_now:
         # get data from localino        
@@ -118,19 +136,26 @@ if __name__ == "__main__":
         rx_power_list.append(rx)
         sig_quality_list.append(sig_q)
         
-        # wait for msg        
-        msg = rospy.wait_for_message('')
+        # wait for msg
+        msg = rospy.wait_for_message(topic, TransformStamped)
         (x,y,z) = decompose_transform_msg(msg)
         
         # add to list
         pose_list_x.append(x)
         pose_list_y.append(y)
         pose_list_z.append(z)
-    
-    newList = list(zip(pose_list_x, pose_list_y, pose_list_z, ))
-    print(newList)
 
-    fileName = typeTest + '_rssi.csv'
+        rospy.loginfo( "Recorded #" + str(num) )
+        num += 1
+    
+    newList = list(zip(pose_list_x, \
+                       pose_list_y, \
+                       pose_list_z, \
+                       fp_power_list, \
+                       rx_power_list, \
+                       sig_quality_list ))
+
+    fileName = testType + '_rssi.csv'
     print(fileName)
     with open(fileName, "w+") as data:
         csvWriter = csv.writer(data)
