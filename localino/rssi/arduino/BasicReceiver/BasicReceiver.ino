@@ -33,6 +33,8 @@ Move the decawave farther away until packet integrity diminishes
 #include <SPI.h>
 #include <DW1000.h>
 
+#include <math.h>
+
 // connection pins
 const uint8_t PIN_RST = 9; // reset pin
 const uint8_t PIN_IRQ = 3; // irq pin for special configuration
@@ -53,7 +55,7 @@ void setup() {
   while( c != 's'){
     c = Serial.read();
   }
-  Serial.println("Ready");
+  Serial.println('s');
   // initialize the driver
   DW1000.begin(PIN_IRQ, PIN_RST);
   DW1000.select(PIN_SS);
@@ -66,7 +68,7 @@ void setup() {
 
   DW1000.setDeviceAddress(6);
   DW1000.setNetworkId(10);
-  DW1000.enableMode(DW1000.MODE_LONGDATA_RANGE_ACCURACY);
+  DW1000.enableMode(DW1000.MODE_LONGDATA_RANGE_ACCURACY, 5);
   DW1000.commitConfiguration();
   DW1000.attachReceivedHandler(handleReceived);
   DW1000.attachReceiveFailedHandler(handleError);
@@ -100,14 +102,18 @@ void loop() {
     DW1000.getData(message);
 
     // all in dBm
+    float fppower = fabs( DW1000.getFirstPathPower() );
+    float rxpower = fabs( DW1000.getReceivePower() );
+    float sig_q = fabs( DW1000.getReceiveQuality() );
+        
     Serial.print(DW1000.getReceivePower()); Serial.print("|");
     Serial.println(DW1000.getReceiveQuality()); Serial.print("*");
     
-    Serial.print("Received message ... #"); Serial.println(numReceived);
-    Serial.print("Data is ... "); Serial.println(message);
-    Serial.print("FP power is [dBm] ... "); Serial.println(DW1000.getFirstPathPower());
-    Serial.print("RX power is [dBm] ... "); Serial.println(DW1000.getReceivePower());
-    Serial.print("Signal quality is ... "); Serial.println(DW1000.getReceiveQuality());
+    // Serial.print("Received message ... #"); Serial.println(numReceived);
+    //Serial.print("Data is ... "); Serial.println(message);
+    //Serial.print("FP power is [dBm] ... "); Serial.println(DW1000.getFirstPathPower());
+    //Serial.print("RX power is [dBm] ... "); Serial.println(DW1000.getReceivePower());
+    //Serial.print("Signal quality is ... "); Serial.println(DW1000.getReceiveQuality());
     received = false;
   }
 }
