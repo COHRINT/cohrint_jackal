@@ -2,12 +2,13 @@
 % There are 6 csv files labeled localinoA_localinoB.csv
 % Each has 3 columns corresponding to
 % Actual Distance, localinoA's measurement of B, localinoB's measurement of A
+   
 clc; close all;
 
 num_meas = 50 * 6 % num measurements at each distance
 
-# load the data
-M = sort( [case_drone ; drone_kipp ; kipp_case ; tars_case ; tars_drone ; tars_kipp ] );
+% load the data
+M = sort( [ case_drone ; drone_kipp ; kipp_case ; tars_case ; tars_drone ; tars_kipp ] );
 
 m_single = sort([M(:,1), M(:,2); M(:,1), M(:,3)]);
 size(m_single)

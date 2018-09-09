@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 """
 
-This node serves as the interface between the traffic node and the localinos
+This node serves as the interface between the traffic node and the localino boards
 - Asks traffic node for a number
-- listens to traffic node's instructions for who to communicate with
-- handles serial communication to localino
-- publishes to /localino_nameA_to_nameB where nameA is the tag who traffic node said to initiate communication, nameB is who the traffic node told nameA to communicate with
+- listens to traffic node's instructions for which other localino to communicate with
+- handles serial communication with localino
+- publishes to /nameA/distacnes where nameA is the localino's name given by the robot_name rosparam 
 
 """
 
@@ -18,7 +18,7 @@ from std_msgs.msg import UInt8, String
 
 from pdb import set_trace
 
-ttyStr = '/dev/localino' # udev rule (67-localino-rules) loads this
+ttyStr = '/dev/localino' # udev rule (67-localino-rules) should load this
 syncCode = 's'
 
 class Localino:
@@ -43,28 +43,32 @@ class Localino:
             rospy.logerr(e)
             sys.exit(1)
 
-        # self.localino_num = 1
-        # self.timeout = 1.0
-        # Localino Serial stuff
-        s = rospy.get_param('~dev') # ACM0 or ACM1
-        ttyString = '/dev/tty' + s
-#        self.l = serial.Serial(ttyStr, 9600, timeout=self.timeout)
-        self.l = serial.Serial(ttyString, 9600, timeout=0.1, write_timeout=0.1) # check but don't block
-#        self.l = serial.Serial(ttyString, 9600)        
+        # Load the Localino over serial
+
+###########   For only 1 localino per machine uncomment the following line ###########
+        self.l = serial.Serial(ttyStr, 9600, timeout=self.timeout, write_timeout=0.1) # don't block on either reading or writing        
+
+###########  For >1 localino on a single machine uncomment the following lines and edit the localino.launch file ###########
+        # s = rospy.get_param('~dev') # ACM0 or ACM1 [For multiple localinos on a single machine
+        # ttyString = '/dev/tty' + s
+        # self.l = serial.Serial(ttyString, 9600, timeout=0.1, write_timeout=0.1)
+        
         self.sync_localino()
-        self.l.write(chr(self.localino_num).encode()) # send the localino its number
+        self.l.write(chr(self.localino_num).encode()) # send the localino its number from the traffic director
         self.wait_ack()
 
-        rospy.Subscriber('instruct', Instruction, self.instruction) # should take the namespace from launch file
-        self.pubComplete = rospy.Publisher('/meas_complete', String, queue_size=10)
-        self.pubDist = rospy.Publisher('distances', Distance, queue_size=10)
+        
+        # initialize some ros things
+        rospy.Subscriber('instruct', Instruction, self.instruction)
+        self.pubComplete = rospy.Publisher('/meas_complete', String, queue_size=10) # we'll use this to communicate to the traffic director that we've completed our measurement
+        self.pubDist = rospy.Publisher('distances', Distance, queue_size=10) # the topic that we put all of our data onto
         rospy.loginfo(self.name + "'s localino node ready")
 
     def wait_ack(self):
-        """ We could block in here... """
+        """ Wait for an acknowledgment from the localino """
         rospy.loginfo("Waiting for ack from localino...")
         resets = 0
-        delayTime = 0.5
+        delayTime = 0.5 # how much we'll delay on each loop if there's no input
         rospy.sleep(delayTime / 2)
         while not rospy.is_shutdown():
             try:
@@ -76,7 +80,7 @@ class Localino:
                 elif not c:
                     rospy.logwarn("No ack from localino")
                     resets += 1
-                    rospy.sleep(delayTime)
+                    rospy.sleep(delayTime) # delay, there was no response from the localino
                 else:
                     rospy.logwarn("Expecting ack code from localino, received other char: " + c)
                 if ( resets * delayTime ) > self.timeout :
@@ -86,15 +90,17 @@ class Localino:
                 rospy.logwarn(e)
             rospy.sleep(delayTime)
             return 0
-#        rospy.loginfo("Received ack")
 
     def parse_packet(self):
+        """
+        Parse the localino's packet
+        """
         prev = self.l.timeout # record previous state of self.l.timeout
         self.l.timeout = None # let's block on receiving packets for now
         """ 
         Parses the range packet from localino & returns the floating point value of the range between the localinos
         """
-        try: # handle killing during communication or bad packets
+        try: # handle user kill during communication or bad packets
             s = self.l.read(6)
             rospy.loginfo("Packet Contents: " + s.decode("utf-8"))
             self.l.timeout = prev
@@ -113,6 +119,7 @@ class Localino:
         self.reset_localino()
         rospy.sleep(0.2)
 
+        # send an instruction to the localino
         rospy.loginfo("Sending instruction to the localino")
         try:
             self.l.write(b'i') # send localino instruction char 
@@ -127,11 +134,11 @@ class Localino:
         if self.wait_ack():
             return
 
-        # start the local timer
+        # start the local timer watchdog for the localino
         self.timedOut = False
         self.timer = rospy.Timer(rospy.Duration.from_sec(self.timeout),self.local_timeout)
 
-        if not self.interpret_localino():
+        if not self.interpret_localino(): # Ask the localino for a range packet
             r = self.parse_packet() # get the localino distance
             if r > 0:
                 rospy.loginfo("range: " + str(r))
@@ -203,7 +210,7 @@ class Localino:
                 
     def local_timeout(self, msg):
         """
-        If we don't get a response from the localino, let's 
+        No response from the localino -> Stop the timer, warn user, indicate that we've timed out to interpret_localino()'s loop 
         """
         self.timer.shutdown()
         rospy.logwarn("Node Timeout waiting for localino")

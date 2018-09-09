@@ -2,8 +2,8 @@
 """
 
 This node organizes communication among the localinos.
-- dynamically assigns names to the localinos
-- coordinates communication among localinos
+- at runtime assigns names to the localinos that have done a rosservice request
+- coordinates communication among localinos by publishing to the /localino_name/instruct topic where localino_name is the name given in the rosservice request
 - Contains procedures to handle one of the localinos dropping out
 
 """
@@ -15,9 +15,11 @@ from localino.srv import *
 import rospy
 import itertools
 
-# for use with self.localinos dictionary of 2 item lists
+# for use with self.localinos dictionary of 2 item lists (first item being the name, 2nd item the publisher object)
 NAME_INDEX = 0
 PUBLISHER_INDEX = 1
+
+HARDCODE_CHANNEL = 1 # The communication scheme was designed with the flexibility to allow for communication on multiple channels, but for our purposes we get fast enough communication just on one channel
 
 class Traffic_Node:
 
@@ -32,7 +34,8 @@ class Traffic_Node:
         
         self.traffic_timeout = float(rospy.get_param("~traffic_timeout", 1.0))
         self.localinos_timeout = float(rospy.get_param("~localinos_timeout", 0.5))
-        
+
+        # initialize ros objects
         self.server = rospy.Service("/add_name_traffic", TrafficAddName, self.add_localino)
         rospy.Subscriber('/meas_complete', String, self.increment_comm)
         rospy.loginfo("Traffic Director Ready")
@@ -52,10 +55,8 @@ class Traffic_Node:
 
     def check_existing(self, name):
         """ If a localino already exists, returns its number """
-#        print(self.localinos)
         for i in range(1, len(self.localinos) + 1):
-#            print(i)
-            if name == self.localinos[i][0]:
+            if name == self.localinos[i][NAME_INDEX]:
                 rospy.logwarn(name + " has already been added, skipping")
                 return i
         return False
@@ -98,6 +99,9 @@ class Traffic_Node:
         return self.localino_combos[self.localino_combos_index]
         
     def increment_comm(self, msg):
+        """
+        Increment the communication to the next two localinos
+        """
         self.timer.shutdown()
         name = msg.data
         if name != self.localinos[self.tag][NAME_INDEX]:
@@ -113,9 +117,9 @@ class Traffic_Node:
         i = Instruction()
         i.num = self.anchor
         i.name = self.localinos[self.anchor][NAME_INDEX]
-        i.freq = 1 # original frequency
+        i.freq = HARDCOME_CHANNEL # we'll just use one frequency for our purposes
         self.localinos[self.tag][PUBLISHER_INDEX].publish(i)
-        self.timer = rospy.Timer(rospy.Duration.from_sec(self.traffic_timeout),self.timeout)
+        self.timer = rospy.Timer(rospy.Duration.from_sec(self.traffic_timeout),self.timeout) # we'll expect a reply from the localino node within a certain period of time or we can assume that we've lost connection and can increment
         
         tag = self.localinos[self.tag][NAME_INDEX]
         tagNum = str(self.tag)
@@ -126,7 +130,7 @@ class Traffic_Node:
     def timeout(self, msg):
         """
         Communication failed between two localinos, let's increment and warn
-        - create a 2nd timeout for parallel communication
+        - TODO create a 2nd timer for parallel communication (one new timer for each new channel)
         """
         # print to screen localinos that failed to contact
         tag = self.localinos[self.tag][NAME_INDEX]
