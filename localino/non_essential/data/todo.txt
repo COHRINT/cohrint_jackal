@@ -1,0 +1,20 @@
+Okay what do I want to analyze??
+
+run a student's T-test!
+
+Let's first plot the data
+Let's get a systematic bias
+      Calculate the mean at every step
+      Subtract it from the actual distance
+      	       Get a mean value for that error and variance for that error
+	       Plot that average error with its variance
+	       	    -> Do certain combinations have more error?
+		    Run a student's T-Test on each combo to see if the error is from the same distribution
+		    
+Let's calculate the variance @ every distance
+      Plot that variance		    
+	       
+Questions:
+	Does the error increase over time?
+
+Provide Jamison the code I've written and all the data for him to do pretty up the display tomorrow

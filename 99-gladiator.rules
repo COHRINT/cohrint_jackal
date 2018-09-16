@@ -1,3 +1,0 @@
-# IMU Recognition udev
-
-ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK="gladiator", MODE="0666"
