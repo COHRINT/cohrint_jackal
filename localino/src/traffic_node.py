@@ -117,7 +117,7 @@ class Traffic_Node:
         i = Instruction()
         i.num = self.anchor
         i.name = self.localinos[self.anchor][NAME_INDEX]
-        i.freq = HARDCOME_CHANNEL # we'll just use one frequency for our purposes
+        i.freq = HARDCODE_CHANNEL # we'll just use one frequency for our purposes
         self.localinos[self.tag][PUBLISHER_INDEX].publish(i)
         self.timer = rospy.Timer(rospy.Duration.from_sec(self.traffic_timeout),self.timeout) # we'll expect a reply from the localino node within a certain period of time or we can assume that we've lost connection and can increment
         

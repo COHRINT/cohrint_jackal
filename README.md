@@ -6,6 +6,7 @@ All required files for creating new jackal robot
 $ sudo cp udev/* /lib/udev/rules.d/
 $ sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
+You can now plug in necessary jackal peripherals, and they will be recognized.
 
 # For establishing GPS
 ```
