@@ -2,12 +2,15 @@
 All required files for creating new jackal robot
 
 # For installing udev rules
-Example:
-- $ sudo cp 51-ros-indigo-jackal-firmware.rules /lib/udev/rules.d/
-- # udevadm control --reload-rules && udevadm trigger
+```
+$ sudo cp udev/* /lib/udev/rules.d/
+$ sudo udevadm control --reload-rules && sudo udevadm trigger
+```
 
 # For establishing GPS
-[As root] usermod -a -G dialout MY_USER_NAME 
+```
+$ usermod -a -G dialout MY_USER_NAME
+```
 
 Notes:
 - Green LED indicates antenna is recieving data 
