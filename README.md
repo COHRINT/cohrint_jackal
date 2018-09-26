@@ -1,5 +1,5 @@
 # cohrint_jackal
-All required files for creating new jackal robot
+All required files for creating new jackal robot. Visit our Wiki for setup information.
 
 # For installing udev rules
 ```
