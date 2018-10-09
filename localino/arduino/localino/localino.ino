@@ -96,6 +96,7 @@ void initDW1000() {
 }
 
 void becomeTag() {
+  resetPeriod = 250;
   my_state = TAG;
   msg_sent = 1;
   //  Serial.println("------------TAG-----------");
@@ -110,6 +111,7 @@ void becomeTag() {
 }
 
 void becomeAnchor() { // can I move the bulk of this to just the initializing state ?
+  resetPeriod = 500;   // wait longer as a tag for a msg as an anchor
   my_state = ANCHOR;
   OTHER_NUM = 0;
   msg_sent = 1;
@@ -288,6 +290,7 @@ void transmitRange() {
   timePollAckReceived.getTimestamp(data + 6);
   timeRangeSent.getTimestamp(data + 11);
   DW1000.setData(data, LEN_DATA);
+  receivedAck = false;  // in case we just received something, ignore it
   DW1000.startTransmit();
     //Serial.print("Expect RANGE to be sent @ "); Serial.println(timeRangeSent.getAsFloat());
   noteActivity();
@@ -555,7 +558,6 @@ void reply_ack(byte num) {
 /* ################################################################### */
 
 void loop_anchor() {
-
   if ( handleSerial() ) {
     return;
   }
@@ -598,6 +600,8 @@ void loop_anchor() {
     byte msgId = data[0];
     if (msgId != expectedMsgId) {
       expectedMsgId = POLL;
+      OTHER_NUM = 0;
+      noteActivity();
       return;
     }
     if (msgId == POLL) {

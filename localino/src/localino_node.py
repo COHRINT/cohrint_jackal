@@ -29,6 +29,9 @@ class Localino:
     def __init__(self):
 
         self.name = rospy.get_param('~robot_name')
+        self._DEBUG = rospy.get_param('~debug')
+        if str(self._DEBUG).lower() == 'false': # ROS will either pass False or false, handle both
+            rospy.logwarn("DEBUG STATUS OFF")
         rospy.loginfo("Starting " + self.name + "'s Localino Node")
         rospy.loginfo("Waiting for Traffic Director")
         rospy.wait_for_service('/add_name_traffic')
@@ -66,7 +69,8 @@ class Localino:
 
     def wait_ack(self):
         """ Wait for an acknowledgment from the localino """
-        rospy.loginfo("Waiting for ack from localino...")
+        if self._DEBUG:
+            rospy.loginfo("Waiting for ack from localino...")
         resets = 0
         delayTime = 0.5 # how much we'll delay on each loop if there's no input
         rospy.sleep(delayTime / 2)
@@ -75,7 +79,8 @@ class Localino:
                 c = self.l.read(1).decode('utf-8')
                 if c == 'a':
                     c2 = self.l.read(1).decode('utf-8')
-                    rospy.loginfo("Received ack #" + str(c2))
+                    if self._DEBUG:
+                        rospy.loginfo("Received ack #" + str(c2))
                     break
                 elif not c:
                     rospy.logwarn("No ack from localino")
@@ -102,7 +107,8 @@ class Localino:
         """
         try: # handle user kill during communication or bad packets
             s = self.l.read(6)
-            rospy.loginfo("Packet Contents: " + s.decode("utf-8"))
+            if self._DEBUG:
+                rospy.loginfo("Packet Contents: " + s.decode("utf-8"))
             self.l.timeout = prev
             return float(s.decode("utf-8"))
         except Exception as e:
@@ -111,7 +117,8 @@ class Localino:
             return -1.0
                          
     def instruction(self, msg):
-        rospy.loginfo("Received instruction from traffic director")
+        if self._DEBUG:
+            rospy.loginfo("Received instruction from traffic director")
         num = int(msg.num)
         name = msg.name
         freq = int(msg.freq)
@@ -120,7 +127,8 @@ class Localino:
         rospy.sleep(0.2)
 
         # send an instruction to the localino
-        rospy.loginfo("Sending instruction to the localino")
+        if self._DEBUG:
+            rospy.loginfo("Sending instruction to the localino")
         try:
             self.l.write(b'i') # send localino instruction char 
             self.l.write(chr(num).encode()) # send number of who to contact
@@ -141,7 +149,7 @@ class Localino:
         if not self.interpret_localino(): # Ask the localino for a range packet
             r = self.parse_packet() # get the localino distance
             if r > 0:
-                rospy.loginfo("range: " + str(r))
+                rospy.loginfo("range to "+name+": " + str(r))
                 d = Distance()
                 d.toWhom = name
                 d.dist = r
@@ -159,50 +167,55 @@ class Localino:
 
     def interpret_localino(self):
         while not rospy.is_shutdown():
+            if self.timedOut:
+#                rospy.logwarn("Received timer timeout, switching to anchor.")
+                return -2
+            known_chars = ['p', 'o', 'r', 'c','t','u','R','N','G','l','M','e']
             c = self.l.read(1).decode('utf-8')
-            if c == 'p':
-                rospy.loginfo("poll sent")
-            elif c == 'o':
+            if c == 'p' and self._DEBUG:
+                    rospy.loginfo("poll sent")
+            elif c == 'o' and self._DEBUG:
                 rospy.loginfo("poll ack received")
-            elif c == 'r':
+            elif c == 'r' and self._DEBUG:
                 rospy.loginfo("range sent")
             elif c == 'c':
-                rospy.loginfo("got the range report!")
                 self.timer.shutdown()
+                if self._DEBUG:
+                    rospy.loginfo("got the range report!")
                 return 0
-            elif c == 't':
+            elif c == 't' and self._DEBUG:
                 rospy.loginfo("on board localino timeout")
-            elif c == 'u':
+            elif c == 'u' and self._DEBUG:
                 rospy.loginfo("unknown char..")
-            elif c == 'R':
+            elif c == 'R' and self._DEBUG:
                 rospy.loginfo("Tag received something...")
-            elif c == 'n':
+            elif c == 'n' and self._DEBUG:
                 rospy.loginfo("Msg wasn't for me...")
-            elif c == 'N':
+            elif c == 'N' and self._DEBUG:
                 rospy.logwarn("Msg wasn't from who I thought...")
                 other_num = self.l.read(1).decode()
                 sender = self.l.read(1).decode()
                 rospy.loginfo("O.N. : " + other_num + " sender : " + sender)
-            elif c == 'G':
+            elif c == 'G' and self._DEBUG:
                 rospy.loginfo("Msg for Me! And from whom I thought.")
-            elif c == 'l':
+            elif c == 'l' and self._DEBUG:
                 rospy.loginfo("Localino looping")
-            elif c in ['0','1','2','3','4','5','6','7','8','9']:
+            elif c in ['0','1','2','3','4','5','6','7','8','9'] and self._DEBUG:
                 rospy.loginfo("Received a # char..." + c)
             elif c == "M":
                 c2 = self.l.read(1).decode()
-                rospy.loginfo("Localino thinks its # is " + c2)
                 c3 = self.l.read(1).decode()
-                rospy.loginfo("Other # is " + c3)
+                if self._DEBUG:
+                    rospy.loginfo("Localino thinks its # is " + c2)
+                    rospy.loginfo("Other # is " + c3)
             elif c == 'e': # Error localino knows about
                 self.timer.shutdown()                
                 c2 = int(self.l.read(1).decode('utf-8'))
                 rospy.logwarn("Localino Error: " + str(c2))
                 return -1
-            elif self.timedOut: # let's tell the localino to change back to anchor
-#                rospy.logwarn("Received timer timeout, switching to anchor.")
-                return -2
             elif c == '':
+                pass
+            elif c in known_chars: # we have self._DEBUGy=False so ignore these
                 pass
             else:
                 rospy.logerr("Received unknown response of type: " + str(type(c)))
