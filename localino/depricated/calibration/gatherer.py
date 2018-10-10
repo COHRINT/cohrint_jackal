@@ -1,11 +1,9 @@
 """
+This class reads in data from the RangingAnchor.ino file and stores the data when the program is killed into a csv file
 
 This file serves as a way to calibrate the localinos
 Steps to gather data from the localinos:
-1. Upload 
-
-This class reads in data from the RangingAnchor.ino file and stores the data when the program is killed
-
+1. Upload firmware
 
 Credits Mayank Jaiswal for the GracefulKiller class
 

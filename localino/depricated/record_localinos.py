@@ -2,15 +2,16 @@
 
 """
 
-Records localino data at certain intervals and stores 
+Records localino data at certain intervals and stores (generated the peer2peer csv files)
 
 To Record:
 launch this node
 launch the localinos
 launch the traffic director
-publish to /labelDistance an unsigned integer of the current distance between the localinos
+publish to /labelDistance an unsigned integer that's the current distance between localinos for the program to start bagging. You can do that with the following command
+       rostopic echo /labelDistance (TAB) (current distance)
 
-republish to /labelDistance to record more measurements
+republish to /labelDistance to update the distance
 
 """
 
