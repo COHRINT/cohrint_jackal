@@ -1,4 +1,4 @@
-This directory contains data taken from localino measurements in different combinations of localinos. For each csv file name1_name2.csv, the columns are as follows:
+This directory contains data taken from localino measurements in different combinations of localinos. Each localino has a name printed on the back side of the board. For each csv file name1_name2.csv, the columns are as follows:
 
 1) True distance in [m]
 2) name1's measurement of the distance from name1 to name2
