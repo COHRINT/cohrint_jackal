@@ -5,29 +5,21 @@
    
 clc; close all;
 
-num_meas = 50 * 6 % num measurements at each distance
+num_meas = 50 * 6 % 50 measurements at each distance, 6 files, this is total number of measurements among files at a given distance
 
-% load the data
-M = sort( [ case_drone ; drone_kipp ; kipp_case ; tars_case ; tars_drone ; tars_kipp ] );
-
-m_single = sort([M(:,1), M(:,2); M(:,1), M(:,3)]);
+% load all measurements into one matrix
+M = sort( [ case_drone ; drone_kipp ; kipp_case ; tars_case ; tars_drone ; tars_kipp ] ); % stack and then rearrange to be 0 - 20
+m_single = sort([M(:,1), M(:,2); M(:,1), M(:,3)]); % now we have one matrix of the form:
+  % [true distance, measurement]
 size(m_single)
 figure
 scatter(m_single(:,1), m_single(:,2))
 xlabel('Distance [m]')
 ylabel('Measurement [m]')
 title('Total Measurements vs Distance')
-% Plot the data
-
-
-%plot( M(:,1), M(:,3))
-%plot( M(:,1), M(:,2))
-%plot( M(:,1), M(:,3))
 
 %                   Let's plot the error
 % Calculate the error at every given point
-
-size(M, 2) ; % this is num columns
 
 u_error_record = [] ;
 %v_error_record = [] ;
@@ -49,7 +41,7 @@ for i = 0:2:20 % we measured at all even numbers 0 to 20
   std_error_record = [std_error_record ; i, std_error ] ;
 endfor
 
-index * num_meas + j
+index * num_meas + j ; 
 
 figure 
 hold on;
