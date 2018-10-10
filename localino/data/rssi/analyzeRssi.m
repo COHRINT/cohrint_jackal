@@ -3,11 +3,11 @@ clf; close all;
 
 col = 6;
  
-u = mean( [ hor_hor_rssi2(:,col); vert_hor_rssi2(:,col); vert_vert_rssi2(:,col) ] ) ;
-sigma = std( [ hor_hor_rssi2(:,col); vert_hor_rssi2(:,col); vert_vert_rssi2(:,col) ] ) ;
+u = mean( [ hor_hor_rssi(:,col); vert_hor_rssi(:,col); vert_vert_rssi(:,col) ] ) ;
+sigma = std( [ hor_hor_rssi(:,col); vert_hor_rssi(:,col); vert_vert_rssi(:,col) ] ) ;
 
-z_hor_hor = ( hor_hor_rssi2(:,col) );
-scatter3( hor_hor_rssi2(:,1), hor_hor_rssi2(:,2), hor_hor_rssi2(:,3), [], z_hor_hor) ;
+z_hor_hor = ( hor_hor_rssi(:,col) );
+scatter3( hor_hor_rssi(:,1), hor_hor_rssi(:,2), hor_hor_rssi(:,3), [], z_hor_hor) ;
 title('Horizontal, Horizontal Signal Quality') ;
 xlabel('x') ;
 ylabel('y') ;
@@ -20,8 +20,8 @@ colorbar()
 caxis([0 550])
 
 figure;
-z_vert_hor = ( vert_hor_rssi2(:,col)  );
-scatter3( vert_hor_rssi2(:,1), vert_hor_rssi2(:,2), vert_hor_rssi2(:,3), [], z_vert_hor) ;
+z_vert_hor = ( vert_hor_rssi(:,col)  );
+scatter3( vert_hor_rssi(:,1), vert_hor_rssi(:,2), vert_hor_rssi(:,3), [], z_vert_hor) ;
 title('Vertical, Horizontal Signal Quality')
 xlabel('x')
 ylabel('y')
@@ -34,8 +34,8 @@ colorbar
 caxis([0 550])
 
 figure;
-z_vert_vert = ( vert_vert_rssi2(:,col) );
-scatter3( vert_vert_rssi2(:,1), vert_vert_rssi2(:,2), vert_vert_rssi2(:,3), [], z_vert_vert) ;
+z_vert_vert = ( vert_vert_rssi(:,col) );
+scatter3( vert_vert_rssi(:,1), vert_vert_rssi(:,2), vert_vert_rssi(:,3), [], z_vert_vert) ;
 title('Vertical, Vertical Signal Quality')
 xlabel('x')
 ylabel('y')
@@ -53,10 +53,10 @@ caxis([0 550])
 figure;
 col = 5;
 
-u = mean( [ hor_hor_rssi2(:,col) ; vert_hor_rssi2(:,col) ; vert_vert_rssi2(:,col) ] ) ;
+u = mean( [ hor_hor_rssi(:,col) ; vert_hor_rssi(:,col) ; vert_vert_rssi(:,col) ] ) ;
 
-z_hor_hor = ( hor_hor_rssi2(:,col)  );
-scatter3( hor_hor_rssi2(:,1), hor_hor_rssi2(:,2), hor_hor_rssi2(:,3), [], z_hor_hor) ;
+z_hor_hor = ( hor_hor_rssi(:,col)  );
+scatter3( hor_hor_rssi(:,1), hor_hor_rssi(:,2), hor_hor_rssi(:,3), [], z_hor_hor) ;
 title('Horizontal, Horizontal Receive Power')
 xlabel('x')
 ylabel('y')
@@ -69,8 +69,8 @@ colorbar
 caxis([-100 -60])
 
 figure;
-z_vert_hor = ( vert_hor_rssi2(:,col)  );
-scatter3( vert_hor_rssi2(:,1), vert_hor_rssi2(:,2), vert_hor_rssi2(:,3), [], z_vert_hor) ;
+z_vert_hor = ( vert_hor_rssi(:,col)  );
+scatter3( vert_hor_rssi(:,1), vert_hor_rssi(:,2), vert_hor_rssi(:,3), [], z_vert_hor) ;
 title('Vertical, Horizontal Receive Power')
 xlabel('x')
 ylabel('y')
@@ -83,8 +83,8 @@ colorbar
 caxis([-100 -60])
 
 figure;
-z_vert_vert = ( vert_vert_rssi2(:,col) );
-scatter3( vert_vert_rssi2(:,1), vert_vert_rssi2(:,2), vert_vert_rssi2(:,3), [], z_vert_vert) ;
+z_vert_vert = ( vert_vert_rssi(:,col) );
+scatter3( vert_vert_rssi(:,1), vert_vert_rssi(:,2), vert_vert_rssi(:,3), [], z_vert_vert) ;
 title('Vertical, Vertical Receive Power')
 xlabel('x')
 ylabel('y')
