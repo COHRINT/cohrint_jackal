@@ -5,8 +5,8 @@ Testing procedure:
 In describing the testing procedure, reference the naming of a csv file as OriginLocalinoOrientation_MovingLocalinoOrientation_rssi.csv
 
 
-- First localino at the origin in OriginLocalinoOrientation with onboard firmware found in arduino/BasicSender/BasicSender.ino
-- Other localino laying laying MovingLocalinoOrientation attached to the centroid of the vicon wand moving about the space.
+- First localino at the origin in OriginLocalinoOrientation with onboard firmware found in arduino/BasicSender/BasicSender.ino (tag)
+- Other localino laying laying MovingLocalinoOrientation attached to the centroid of the vicon wand moving about the space. On board firmware found in arduino/BasicReceiver/BasicReceiver.ino (anchor)
 
 In the CSV files, the recorded data organized by columns are as follows:
 1) x location of wand
