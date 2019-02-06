@@ -1,3 +1,10 @@
 <launch>
   <node name="GPS" pkg="gps" type="gps_serial.py" />
+
+   <include file="$(find timed_roslaunch)/launch/timed_roslaunch.launch">
+        <arg name="time" value="2" />
+        <arg name="pkg" value="ugv" />
+        <arg name="file" value="base.launch" />
+        <arg name="node_name" value="timed_roslaunch" /> <!-- This is optional argument -->
+   </include>
 </launch>
