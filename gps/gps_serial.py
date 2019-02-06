@@ -49,7 +49,7 @@ if __name__ == '__main__':
 			lon = (bytes[4])
 			if not lon:
 				print('No GPS data')
-				break
+				
 			else:
 				lat = float(lat)
 				lon = float(lon)
