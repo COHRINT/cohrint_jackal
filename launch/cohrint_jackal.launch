@@ -1,0 +1,3 @@
+<launch>
+  <node name="GPS" pkg="gps" type="gps_serial.py" />
+</launch>
