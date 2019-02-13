@@ -16,7 +16,7 @@ def init_serial():
 	ser = serial.Serial()
 	ser.baudrate = 9600
    
-	ser.port = '/dev/ttyACM0' #uncomment for linux
+	ser.port = '/dev/case_gps' #uncomment for linux
 
 	#you must specify a timeout (in seconds) so that the
 	# serial port doesn't hang
