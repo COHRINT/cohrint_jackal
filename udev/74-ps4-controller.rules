@@ -1,0 +1,1 @@
+SUBSYSTEM=="input", DRIVERS=="sony", SUBSYSTEMS=="hid", SYMLINK+="ps4_controller", MODE="0666", OWNER="cohrint"
