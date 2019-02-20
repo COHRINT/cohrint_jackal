@@ -2,6 +2,7 @@
 
 import sys
 import serial
+import os
 import rospy
 from gps.msg import *
 
@@ -15,8 +16,8 @@ def init_serial():
 	global ser #must be declared in each fxn used
 	ser = serial.Serial()
 	ser.baudrate = 9600
-   
-	ser.port = '/dev/case_gps' #uncomment for linux
+        name = os.environ["ROBOT_NAME"]
+	ser.port = "/dev/"+name+"_gps"  #uncomment for linux
 
 	#you must specify a timeout (in seconds) so that the
 	# serial port doesn't hang
