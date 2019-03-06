@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# Kills all rosnodes then kills the roscore
+
 rosnode kill -a
 res=`ps aux |grep -i roscore`
 str_arr=($res)
