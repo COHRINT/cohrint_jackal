@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 """
 
 This node serves as the interface between the traffic node and the localino boards

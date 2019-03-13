@@ -291,7 +291,7 @@ imu_data_t* GladiatorIMU::acquireData()
     {
 
        fullMessage = getSingleMessage();
-       //port->dumpBuffer((uint8_t*)fullMessage, sizeof(gladiator_rx_msg_t));
+       port->dumpBuffer((uint8_t*)fullMessage, sizeof(gladiator_rx_msg_t));
        if (fullMessage)
 	 {
 	   data = translate(fullMessage);
