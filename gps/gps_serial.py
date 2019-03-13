@@ -17,7 +17,7 @@ def init_serial():
 	ser = serial.Serial()
 	ser.baudrate = 9600
         name = os.environ["ROBOT_NAME"]
-	ser.port = "/dev/"+name+"_gps"  #uncomment for linux
+	ser.port = "/dev/gps"  #uncomment for linux
 
 	#you must specify a timeout (in seconds) so that the
 	# serial port doesn't hang
