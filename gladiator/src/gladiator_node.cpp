@@ -20,19 +20,45 @@
 int main(int argc, char **argv)
 {
   ros::init(argc,argv,"gladiator_node");
-  ros::NodeHandle n;
+  ros::NodeHandle n("~");
   ros::Publisher imu_pub = n.advertise<sensor_msgs::Imu>("imu",1000);
   ROS_INFO("Initializing Gladiator IMU");
   unsigned int seq = 1;
   ros::Time now;
+  string portName;
+  int32_t baud;
   
-  GladiatorIMU *drv = new GladiatorIMU("/dev/gladiator"); // udev rule
+  n.param("port", portName, string("/dev/gladiator"));
+  n.param("baud", baud, (int32_t) 921600);
+  
+  ROS_INFO("Using port: %s at %d", portName.c_str(), baud);
+  GladiatorIMU *drv = new GladiatorIMU(portName.c_str(), baud);
   drv->start();
   
-    while (ros::ok())
+  gladiator_cmd_t factoryReloadCmd(drv, CMD_RELOAD_FACTORY, 0);
+  factoryReloadCmd.submit();
+
+  /*
+  gladiator_cmd_t setSpeedCmd(drv, CMD_SETRATE, 500);
+  setSpeedCmd.submit();
+  */
+  
+  /*
+  gladiator_cmd_t testModeCmd(drv, CMD_TESTMODE, 0);
+  testModeCmd.submit();
+
+  gladiator_cmd_t getCoefCmd(drv, CMD_GETCOEFFS, 0);
+  getCoefCmd.submit();
+  ROS_INFO("Coefficient dump complete");
+  */
+  
+  while (ros::ok())
       {
 	//  	ROS_INFO("Top of Loop");
   	imu_data_t* rawIMU = (imu_data_t*) drv->WaitData(); // Threaded Object
+	if (!rawIMU)
+	  break;
+	
   	//Translate the imu packet from the fixed point to the floating point
   	 float accel_x = rawIMU->accel_x*ACCL_TO_M_S2;
   	 float accel_y = rawIMU->accel_y*ACCL_TO_M_S2;

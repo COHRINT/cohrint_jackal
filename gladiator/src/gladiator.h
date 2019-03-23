@@ -44,7 +44,7 @@ typedef struct {
 } __attribute__((packed)) gladiator_tx_msg_t;
 
 class GladiatorIMU;
-enum GladiatorCommand {CMD_LOADK = 0, CMD_SETRATE, CMD_GETSTATUS, CMD_GETSERIAL, CMD_GETBOARD};
+enum GladiatorCommand {CMD_LOADK = 0, CMD_SETRATE, CMD_GETSTATUS, CMD_GETSERIAL, CMD_GETBOARD, CMD_GETCOEFFS, CMD_TESTMODE, CMD_RELOAD_FACTORY};
 enum GladiatorMode {MODE_100HZ = 0x00010004, MODE_200HZ = 0x00010001};
 
 
@@ -61,7 +61,7 @@ class gladiator_cmd_t : public ThreadedCommand
 class GladiatorIMU : public ThreadedObject
 {
  public:
-  GladiatorIMU(const char *serPort);
+  GladiatorIMU(const char *serPort, uint32_t baud);
   ~GladiatorIMU();
   void run();
 
@@ -83,7 +83,15 @@ class GladiatorIMU : public ThreadedObject
   void makeGyro(int32_t src, int32_t* dest);
   void makeTemp(int16_t src, int16_t* dest);
   int epsilonEqual( float a, float b, float epsilon );
+  void makeCoefDump();
+  void getTestMode();
+  void reloadFactory();
+  
   static const uint8_t msgSuccess[22];
+  static const uint8_t msgImuCoeff[246];
+  static const uint8_t msgCalCoeff[662];
+  static const uint8_t msgTest[156];
+ 
   uint8_t revNumber[2]; //zero is major, one is minor
   uint8_t productCode;
   uint8_t releaseLevel;

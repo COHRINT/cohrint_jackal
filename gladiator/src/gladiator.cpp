@@ -11,12 +11,22 @@ Originally developed at Astrobotic (https://www.astrobotic.com). Used with permi
 /*Tx constants */
 #define TX_BYTE_PAUSE (0xd4)
 #define TX_BYTE_SYNC (0x2b)
+
 // CMD[0] field
 #define TX_BYTE_OUTPUT_200 (0x02)
 #define TX_BYTE_LOAD_COEF (0x05)
 #define TX_BYTE_COEF_STORE (0x06)
 #define TX_BYTE_OUTPUT_100 (0x0A)
+#define TX_BYTE_OUTPUT_200 (0x02)
+#define TX_BYTE_OUTPUT_500 (0x16)
 #define TX_BYTE_RUN_NOW (0x0D)
+#define TX_BYTE_IMU_COEF (0x0E)
+#define TX_BYTE_CAL_COEF (0x1B)
+#define TX_BYTE_CAL_100 (0x01)
+#define TX_BYTE_TEST_100 (0x09)
+#define TX_BYTE_RELOAD_CAL (0x1f)
+#define TX_BYTE_RELOAD_IMU (0x1d)
+
 // CMD[1] field: these values relate to the cmd[1] field in gladiator_tx_msg_t,
 // when the cmd[0] field is set to TX_BYTE_LOAD_COEF.
 #define COEF_FILTER_K (0x02)
@@ -29,6 +39,8 @@ Originally developed at Astrobotic (https://www.astrobotic.com). Used with permi
 #define MODE_IMU_200HZ (0x01 | MODE_IMU_MASK| MODE_IMU_921K_BAUD)
 #define MODE_IMU_500HZ (0x0C | MODE_IMU_MASK| MODE_IMU_921K_BAUD)
 #define MODE_IMU_1000HZ (0x0E | MODE_IMU_MASK | MODE_IMU_921K_BAUD)
+
+
 
 const uint8_t GladiatorIMU::msgSuccess[ 22 ] = {
   0x2b, // msg start character
@@ -52,12 +64,12 @@ const uint8_t GladiatorIMU::msgSuccess[ 22 ] = {
 #define MSG_BUF_SIZE (128)
 #define FLOAT_EPSILON 1e-6
 
-GladiatorIMU::GladiatorIMU(const char* serPort)
+GladiatorIMU::GladiatorIMU(const char* serPort, uint32_t baud)
 {
   //Port needs to be set to RS485, 921600,8e2
   port = new CommPort();
   port->OpenPort(serPort);
-  port->ChangeTermSpeed(921600);
+  port->ChangeTermSpeed(baud);
   port->setRS485(1);
   port->setParity(CommPort::PARITY_EVEN);
   port->setStopBits(CommPort::STOP_BITS_TWO);
@@ -99,9 +111,21 @@ void GladiatorIMU::run()
       /* Pull a message */
       data = acquireData();
 
-      /* Post some data */
-      PutData(data);
+      if (data)
+	{
+	  /* Post some data */
+	  PutData(data);
+	}
+      else
+	{
+	  printf("GladiatorIMU: Timeout getting data\n");
+	  PutData(NULL);
+	  break;
+	}
+      
     }
+
+  printf("GladiatorIMU: Exiting\n");
 }
 
 // sendMessage() : Sends a message/command to the IMU device. Assigns
@@ -187,22 +211,125 @@ void GladiatorIMU::setSampleRate(uint32_t mode)
   usleep(10000); //sleep for 10ms
 
   //Save to onboard flash
+  /*
   gMsg.cmd[0] = TX_BYTE_COEF_STORE;
   gMsg.cmd[1] = 1; //number of commands updated
   gMsg.payload = 0;
   sendMessage(&gMsg);
-
+  
+  */
   //msgSuccess is returned - consume the bytes
   uint8_t rxBuffer[BUFFER_SIZE];
-  //uint8_t numRead = 0;
-  port->Read(rxBuffer, sizeof(msgSuccess), SERIAL_TIMEOUT);
+  uint8_t numRead = 0;
+  numRead = port->Read(rxBuffer, sizeof(msgSuccess), SERIAL_TIMEOUT);
   printf("GladiatorIMU: Change sample rate successful\n");
- 
+  port->dumpBuffer(rxBuffer, numRead);
+  
   //Apply it now
   gMsg.cmd[0] = TX_BYTE_RUN_NOW;
   gMsg.cmd[1] = 0;
   sendMessage(&gMsg);
 }
+
+void GladiatorIMU::reloadFactory()
+{
+  gladiator_tx_msg_t gMsg;
+  gMsg.cmd[0] = TX_BYTE_RELOAD_CAL; //TX_BYTE_IMU_COEF
+  gMsg.cmd[1] = 0;
+  gMsg.payload = 0;
+  sendMessage(&gMsg); 
+  
+  gMsg.cmd[0] = TX_BYTE_RELOAD_IMU; //TX_BYTE_IMU_COEF
+  gMsg.cmd[1] = 0;
+  gMsg.payload = 0;
+  sendMessage(&gMsg); 
+
+  gMsg.cmd[0] = TX_BYTE_OUTPUT_200;
+  gMsg.cmd[1] = 1;
+  gMsg.payload = 0;
+  sendMessage(&gMsg);
+  
+  //Apply it now
+  gMsg.cmd[0] = TX_BYTE_RUN_NOW;
+  gMsg.cmd[1] = 0;
+  sendMessage(&gMsg);
+  usleep(10000); //sleep for 10ms
+
+}
+
+void GladiatorIMU::getTestMode()
+{
+  gladiator_tx_msg_t gMsg;
+  gMsg.cmd[0] = TX_BYTE_TEST_100; //TX_BYTE_IMU_COEF
+  gMsg.cmd[1] = 0;
+  gMsg.payload = 0;
+  sendMessage(&gMsg); //first, load into active RAM
+  usleep(10000); //sleep for 10ms
+  
+  //Apply it now
+  gMsg.cmd[0] = TX_BYTE_RUN_NOW;
+  gMsg.cmd[1] = 0;
+  sendMessage(&gMsg);
+  usleep(10000); //sleep for 10ms
+ 
+  printf("GladiatorIMU: Set to test mode\n");
+
+  //IMU Coef msgs are 246 bytes long...
+  uint8_t rxBuffer[BUFFER_SIZE];
+  uint8_t numRead = 0;
+  numRead = port->Read(rxBuffer, sizeof(msgTest), SERIAL_TIMEOUT);
+  printf("GladiatorIMU: Got test msg of len: %d\n", numRead);
+  port->dumpBuffer(rxBuffer, numRead);
+  usleep(10000); //sleep for 10ms
+  return;
+}
+
+//Enable the IMU / cal coef output modes. This changes the message output to be much longer
+//Accomplished via a 'set mode' message
+void GladiatorIMU::makeCoefDump()
+{
+  gladiator_tx_msg_t gMsg;
+  gMsg.cmd[0] = TX_BYTE_IMU_COEF; //TX_BYTE_IMU_COEF
+  gMsg.cmd[1] = 0;
+  gMsg.payload = 0;
+  sendMessage(&gMsg); //first, load into active RAM
+  usleep(10000); //sleep for 10ms
+  
+  //Apply it now
+  gMsg.cmd[0] = TX_BYTE_RUN_NOW;
+  gMsg.cmd[1] = 0;
+  sendMessage(&gMsg);
+
+  printf("GladiatorIMU: Set to IMU Coef mode\n");
+
+  //IMU Coef msgs are 246 bytes long...
+  uint8_t rxBuffer[BUFFER_SIZE];
+  uint8_t numRead = 0;
+  numRead = port->Read(rxBuffer, sizeof(msgImuCoeff), SERIAL_TIMEOUT);
+  printf("GladiatorIMU: Got IMU coef msg of len: %d\n", numRead);
+  port->dumpBuffer(rxBuffer, numRead);
+  usleep(10000); //sleep for 10ms
+  return;
+  
+  gMsg.cmd[0] = TX_BYTE_CAL_COEF;
+  gMsg.cmd[1] = 0;
+  gMsg.payload = 0;
+  sendMessage(&gMsg); //first, load into active RAM
+  usleep(10000); //sleep for 10ms
+  
+  //Apply it now
+  gMsg.cmd[0] = TX_BYTE_RUN_NOW;
+  gMsg.cmd[1] = 0;
+  sendMessage(&gMsg);
+
+  printf("GladiatorIMU: Set to Cal Coef mode\n");
+
+  port->Read(rxBuffer, sizeof(msgCalCoeff), SERIAL_TIMEOUT);
+  printf("GladiatorIMU: Got Cal coef msg of len: %d\n", numRead);
+  port->dumpBuffer(rxBuffer, numRead);
+}
+
+
 
 // pauseOutput() : Call prior to sending a message to the IMU device.
 // Since the IMU uses half-duplex communication, the IMU device
@@ -252,6 +379,21 @@ void GladiatorIMU::handleCommand(gladiator_cmd_t* cmd)
 	}
 
       break;
+    case CMD_GETCOEFFS:
+      printf("GladiatorIMU: Making coefficient dump\n");
+      makeCoefDump();
+      break;
+
+    case CMD_TESTMODE:
+      printf("GladiatorIMU: Setting test mode\n");
+      getTestMode();
+      break;
+
+    case CMD_RELOAD_FACTORY:
+      printf("GladiatorIMU: Reloading factory settings\n");
+      reloadFactory();
+      break;
+      
     case CMD_GETBOARD:
       printf("GladiatorIMU: Returning board number bytes\n");
       cmd->payload = 0;
@@ -285,13 +427,14 @@ imu_data_t* GladiatorIMU::acquireData()
      with uSync ==  RX_SYNC_BYTE
   */
   int validMessage = 0;
+  int failCount = 0;
   gladiator_rx_msg_t* fullMessage;
   imu_data_t *data;
   while (!validMessage)
     {
 
        fullMessage = getSingleMessage();
-       port->dumpBuffer((uint8_t*)fullMessage, sizeof(gladiator_rx_msg_t));
+       //port->dumpBuffer((uint8_t*)fullMessage, sizeof(gladiator_rx_msg_t));
        if (fullMessage)
 	 {
 	   data = translate(fullMessage);
@@ -299,6 +442,16 @@ imu_data_t* GladiatorIMU::acquireData()
 	   if (!epsilonEqual(accelScale, 0, FLOAT_EPSILON))
 	       validMessage = 1;
 	 }
+       else
+	 {
+	   failCount++;
+	   usleep(1000);
+	   if (failCount > 10)
+	     {
+	       return NULL;
+	     }
+	 }
+       
     }
   
   delete fullMessage;
