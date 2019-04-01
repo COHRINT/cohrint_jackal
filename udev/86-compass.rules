@@ -1,1 +1,1 @@
-SUBSYSTEMS=="tty", ATTRS{idVendor}=="152a", ATTRS{idProduct}=="80c1", SYMLINK+="compass", GROUP="users", MODE="0666"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="152a", ATTRS{idProduct}=="80c1", SYMLINK+="compass", GROUP="users", MODE="0666"
