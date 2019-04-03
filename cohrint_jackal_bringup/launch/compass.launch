@@ -1,0 +1,8 @@
+<launch>
+	<arg name="dev" value="/dev/compass" />
+
+	<node ns="compass" name="compass_node" pkg="bno055_usb_stick" type="bno055_usb_stick_node" output="screen" >
+	      <param name="port" value="$(arg dev)" />
+	</node>
+
+</launch>

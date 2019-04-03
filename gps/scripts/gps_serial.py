@@ -31,16 +31,16 @@ def init_serial():
 
 
 if __name__ == '__main__':
-	rospy.init_node('GPS')
+	rospy.init_node('gps_node')
 
-	pub = rospy.Publisher('GPS', Gps, queue_size = 10, latch = True)
+	pub = rospy.Publisher('gps', Gps, queue_size = 10, latch = True)
 	msg = Gps()
 
 	#####SETUP################################################
 	init_serial()
 
 	#####MAIN LOOP############################################
-	while 1:
+	while 1 and not rospy.is_shutdown():
 		bytes = ser.readline() #reads in bytes 
 
 

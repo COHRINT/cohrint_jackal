@@ -1,0 +1,9 @@
+<launch>
+
+<group ns="$(env ROBOT_NAME)" >
+       <include file="$(find jackal_base)/launch/base.launch" />
+       <include file="$(find localino)/launch/localino.launch" />
+       <include file="$(find cohrint_jackal_bringup)/launch/compass.launch" />
+</group>
+
+</launch>
