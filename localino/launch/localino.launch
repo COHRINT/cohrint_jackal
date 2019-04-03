@@ -3,18 +3,23 @@
 <launch>
 
 	<arg name="debug" default="False" />
-	<arg name="robot_name" value="$(env ROBOT_NAME)" />	 <!-- Name of the robot w/ the localino -->
 <!--	<arg name="dev" />  should be AMC0 or ACM1 -->
+	<arg name="included" default="false" />
 
-<group ns="$(arg robot_name)">
+<group ns="$(env ROBOT_NAME)" unless="$(arg included)" >
 
-<node name="localino_node" pkg="localino" type="localino_node.py" output="screen">
-      <param name="debug" value="$(arg debug)" />
-      <param name="robot_name" value="$(arg robot_name)" /> <!-- gotta make sure this doens't get antoher robot's name -->
+       <node name="localino_node" pkg="localino" type="localino_node.py" output="screen">
+       	     <param name="debug" value="$(arg debug)" />
+      	     <param name="robot_name" value="$(env ROBOT_NAME)" /> <!-- gotta make sure this doens't get antoher robot's name -->
 <!--      <param name="dev" value="$(arg dev)" /> Only for multiple localinos on a single machine -->
-</node>
+	  </node>
+</group>
 
-
+<group if="$(arg included)">
+       <node name="localino_node" pkg="localino" type="localino_node.py" output="screen">
+       	     <param name="debug" value="$(arg debug)" />
+       	     <param name="robot_name" value="$(env ROBOT_NAME)" /> <!-- gotta make sure this doens't get antoher robot's name -->
+	</node>
 </group>
 
 </launch>

@@ -1,4 +1,5 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
+from __future__ import division
 """
 
 This node serves as the interface between the traffic node and the localino boards
