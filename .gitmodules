@@ -1,0 +1,6 @@
+[submodule "bno055_usb_stick"]
+	path = bno055_usb_stick
+	url = https://github.com/yoshito-n-students/bno055_usb_stick.git
+[submodule "bno055_usb_stick_msgs"]
+	path = bno055_usb_stick_msgs
+	url = https://github.com/yoshito-n-students/bno055_usb_stick_msgs.git
