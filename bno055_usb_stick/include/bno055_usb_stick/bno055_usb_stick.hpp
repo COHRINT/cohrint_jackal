@@ -28,16 +28,17 @@
 #include <boost/system/error_code.hpp>
 #include <boost/system/system_error.hpp>
 
+
 namespace bno055_usb_stick {
 
 class BNO055USBStick {
 public:
   typedef boost::function< void(const bno055_usb_stick_msgs::Output &) > Callback;
-
+  const std::string choose;
 public:
   BNO055USBStick(boost::asio::io_service &asio_service, const Callback &callback,
                  const std::string &ns = "~")
-      : port_(ros::param::param< std::string >(ros::names::append(ns, "port"), "/dev/ttyACM0")),
+      : port_(ros::param::param< std::string >(ros::names::append(ns, "port"), "/dev/compass")),
         timeout_(ros::param::param(ros::names::append(ns, "timeout"), 1.)),
         mode_(ros::param::param< std::string >(ros::names::append(ns, "mode"), "ndof")),
         serial_(asio_service), timer_(asio_service), callback_(callback), decoder_(ns) {
@@ -70,12 +71,17 @@ private:
 
     // pack commands
     commands_.clear();
+      for (const boost::uint8_t **command = Constants::toCONFIGCommands(); *command; ++command) {
+        commands_.push_back(*command);}
+
+
     if (mode_ == "ndof") {
       for (const boost::uint8_t **command = Constants::toNDOFCommands(); *command; ++command) {
         commands_.push_back(*command);
       }
-    } else if (mode_ == "imu") {
-      for (const boost::uint8_t **command = Constants::toIMUCommands(); *command; ++command) {
+    } else if (mode_ == "AMG") {
+      ROS_INFO_STREAM("AMG");
+      for (const boost::uint8_t **command = Constants::toAMGCommandsUGLY(); *command; ++command) {
         commands_.push_back(*command);
       }
     } else {
@@ -177,7 +183,7 @@ private:
       restart();
       return;
     }
-
+   
     // decode the received data and execute the user callback
     // dumpRead("handleWaitData: read: ", bytes);
     if (callback_) {
@@ -186,6 +192,7 @@ private:
       const boost::uint8_t *data_begin(data_end - Constants::DAT_LEN);
       const bno055_usb_stick_msgs::Output output(decoder_.decode(data_begin));
       callback_(output);
+      
     }
 
     // clear the parsed data
