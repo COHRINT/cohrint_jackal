@@ -24,6 +24,7 @@ ros::Publisher pose_pub;
 std::string pose_frame_id;
 ros::Publisher mag_pub;
 ros::Publisher temp_pub;
+ros::Publisher cal_pub;
 boost::shared_ptr< tf::TransformBroadcaster > tf_pub;
 std::string tf_frame_id, tf_child_frame_id;
 bool invert_tf;
@@ -48,12 +49,25 @@ void publish(const bno055_usb_stick_msgs::Output &output) {
     tf_pub->sendTransform(
         bus::Decoder::toTFTransform(output, tf_frame_id, tf_child_frame_id, invert_tf));
   }
+  if (cal_pub.getNumSubscribers() > 0) {
+    cal_pub.publish(bus::Decoder::toCalMsg(output));
+  }
 }
 
 int main(int argc, char *argv[]) {
   // init ROS
   ros::init(argc, argv, "bno055_usb_stick_node");
   ros::NodeHandle nh;
+  std::string nk;
+   if (argv[1] == NULL)
+  { ROS_WARN_STREAM("No input specified, going for ndof");
+    nk = "ndof";
+  }
+  else
+  {
+  nk = argv[1];
+  }
+ 
 
   // load parameters
   pose_frame_id = ros::param::param< std::string >("~pose_frame_id", "fixed");
@@ -68,14 +82,15 @@ int main(int argc, char *argv[]) {
   pose_pub = nh.advertise< geometry_msgs::PoseStamped >("pose", 1);
   mag_pub = nh.advertise< sensor_msgs::MagneticField >("magnetic_field", 1);
   temp_pub = nh.advertise< sensor_msgs::Temperature >("temperature", 1);
+  cal_pub = nh.advertise< bno055_usb_stick_msgs::CalibrationStatus >("calibration_status", 1);
   if (publish_tf) {
     tf_pub.reset(new tf::TransformBroadcaster);
   }
 
   // construct the worker
   boost::asio::io_service asio_service;
-  bus::BNO055USBStick device(asio_service, publish);
-
+  bus::BNO055USBStick device(asio_service, publish, nk);
+  
   // run the worker
   while (nh.ok()) {
     asio_service.run_one();

@@ -15,6 +15,7 @@
 #include <sensor_msgs/Temperature.h>
 #include <tf/transform_datatypes.h>
 
+
 #include <bno055_usb_stick/constants.hpp>
 #include <bno055_usb_stick_msgs/CalibrationStatus.h>
 #include <bno055_usb_stick_msgs/EulerAngles.h>
@@ -102,6 +103,12 @@ public:
     temp.variance = 0.;
     return temp;
   }
+    static bno055_usb_stick_msgs::CalibrationStatus toCalMsg(const bno055_usb_stick_msgs::Output &output) {
+    bno055_usb_stick_msgs::CalibrationStatus cal;
+    cal = output.calibration_status;
+
+    return cal;
+ }
 
 private:
   static geometry_msgs::Vector3 decodeAcc(const boost::uint8_t *data) {

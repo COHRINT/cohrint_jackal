@@ -5,7 +5,7 @@
 #include <deque>
 #include <sstream>
 #include <string>
-
+#include <stdio.h> 
 #include <ros/console.h>
 #include <ros/duration.h>
 #include <ros/names.h>
@@ -28,19 +28,21 @@
 #include <boost/system/error_code.hpp>
 #include <boost/system/system_error.hpp>
 
-
 namespace bno055_usb_stick {
+
 
 class BNO055USBStick {
 public:
   typedef boost::function< void(const bno055_usb_stick_msgs::Output &) > Callback;
-  const std::string choose;
+
+
 public:
+  const std::string &ns = "~";
   BNO055USBStick(boost::asio::io_service &asio_service, const Callback &callback,
-                 const std::string &ns = "~")
+                const std::string &tr)
       : port_(ros::param::param< std::string >(ros::names::append(ns, "port"), "/dev/compass")),
         timeout_(ros::param::param(ros::names::append(ns, "timeout"), 1.)),
-        mode_(ros::param::param< std::string >(ros::names::append(ns, "mode"), "ndof")),
+        mode_(ros::param::param< std::string >(ros::names::append(ns, "mode"), tr)),
         serial_(asio_service), timer_(asio_service), callback_(callback), decoder_(ns) {
     start();
   }
@@ -55,7 +57,7 @@ private:
     // setup the serial port
     try {
       serial_.open(port_);
-
+      const std::string choose = "unknown";
       typedef boost::asio::serial_port Serial;
       serial_.set_option(Serial::baud_rate(115200));
       serial_.set_option(Serial::flow_control(Serial::flow_control::none));
@@ -76,14 +78,21 @@ private:
 
 
     if (mode_ == "ndof") {
+      ROS_INFO_STREAM("ndof");
       for (const boost::uint8_t **command = Constants::toNDOFCommands(); *command; ++command) {
         commands_.push_back(*command);
       }
+      for (const boost::uint8_t **command = Constants::startStreamCommands(); *command; ++command) {
+      commands_.push_back(*command);
+    }
     } else if (mode_ == "AMG") {
       ROS_INFO_STREAM("AMG");
       for (const boost::uint8_t **command = Constants::toAMGCommandsUGLY(); *command; ++command) {
         commands_.push_back(*command);
       }
+      for (const boost::uint8_t **command = Constants::startStreamCommands(); *command; ++command) {
+      commands_.push_back(*command);
+    }
     } else {
       ROS_WARN_STREAM("Unknown mode \""
                       << mode_ << "\" was given. Will use the default mode \"ndof\" instead.");
@@ -91,9 +100,7 @@ private:
         commands_.push_back(*command);
       }
     }
-    for (const boost::uint8_t **command = Constants::startStreamCommands(); *command; ++command) {
-      commands_.push_back(*command);
-    }
+
 
     // trigger send packed commands
     startSendCommand();
@@ -271,6 +278,7 @@ private:
     }
     ROS_INFO_STREAM(prefix << oss.str());
   }
+
 
 private:
   // parameters
