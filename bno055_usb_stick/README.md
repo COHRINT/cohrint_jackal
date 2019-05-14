@@ -34,6 +34,7 @@ bno055_usb_stick_msgs https://github.com/yoshito-n-students/bno055_usb_stick_msg
 **~mode** (string, default: "ndof")
 * "nodf": estimate absolute orientation with an accelerometer, gyroscope, and magnetometer
 * "imu": estimate relative orientation with an accelerometer and gyroscope
+* "AMG": All 3 sensors without fusion data
 
 **~frame_id** (string, default: "bno055")
 * frame id of messages except pose and tf
