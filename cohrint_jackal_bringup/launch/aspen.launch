@@ -6,10 +6,11 @@
 
 	<node pkg="cohrint_jackal_bringup" type="vicon_pose_repub.py" name="vicon_repub"/>
 	<!-- <node pkg="cohrint_jackal_bringup" type="cmd_vel_repub.py" name="cmd_repub"/> -->
+	<include file="$(find cohrint_jackal_bringup)/launch/compass.launch"/>
 
 
 	<node pkg="robot_localization" type="ekf_localization_node" name="ekf_aspen" clear_params="true">
-        <rosparam command="load" file="$(find cohrint_jackal_bringup)/params/aspen_template2.yaml" />
+        <rosparam command="load" file="$(find cohrint_jackal_bringup)/config/aspen_ekf.yaml" />
         <remap from="odometry/filtered" to="odometry/filtered/aspen"/>
 	</node>
 

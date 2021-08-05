@@ -3,6 +3,7 @@
 
 	<node ns="compass" name="compass_node" pkg="bno055_usb_stick" type="bno055_usb_stick_node" output="screen" >
 	      <param name="port" value="$(arg dev)" />
+		  <param name="mode" value="ndof"/>
 	</node>
 
 </launch>
