@@ -1,0 +1,7 @@
+<launch>
+	<group ns="kipp">
+		<include file="$(find jackal_base)/launch/base.launch"/>
+		<include file="$(find cohrint_jackal_bringup)/launch/aspen.launch"/>
+	</group>
+
+</launch>

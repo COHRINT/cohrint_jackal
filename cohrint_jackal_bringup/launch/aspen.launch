@@ -1,0 +1,15 @@
+<launch>
+
+    <include file="$(find vrpn_client_ros)/launch/sample.launch">
+		<arg name="server" value="192.168.20.100"/>
+	</include>
+
+	<node pkg="cohrint_jackal_bringup" type="vicon_pose_repub.py" name="vicon_repub"/>
+
+	<node pkg="robot_localization" type="ekf_localization_node" name="ekf_se_aspen" clear_params="true">
+        <rosparam command="load" file="$(find cohrint_jackal_bringup)/config/aspen_ekf.yaml" />
+        <remap from="odometry/filtered" to="odometry/filtered/aspen"/>
+    </node>
+
+
+</launch>
