@@ -1,12 +1,19 @@
 <launch>
 
 <group ns="$(env ROBOT_NAME)" >
-       <include file="$(find jackal_base)/launch/base.launch" />
-       <include file="$(find localino)/launch/localino.launch" />
-       <include file="$(find cohrint_jackal_bringup)/launch/compass.launch" />
-       <node name="gps_node" pkg="gps" value="gps_serial.py" output="screen" />
-       
+       <!-- Default Clearpath launch file -->
+       <include file="$(find jackal_base)/launch/base.launch" /> 
 
+       <!-- Localino launch file -->
+       <include file="$(find localino)/launch/localino.launch" >
+       		<arg name="included" value='true' />
+	</include> 
+
+       <!-- bno055 compass stick (imu) launch file -->
+       <include file="$(find cohrint_jackal_bringup)/launch/compass.launch" />
+
+       <!-- gps launch file -->
+       <!-- <node name="gps_node" pkg="gps" value="gps_serial.py" output="screen" /> -->
 </group>
 
 </launch>

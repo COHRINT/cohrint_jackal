@@ -14,12 +14,26 @@
        <!-- bno055 compass stick (imu) launch file -->
        <include file="$(find cohrint_jackal_bringup)/launch/compass.launch" />
 
+       <!-- vicon launch file -->
+	<include file="$(find vrpn_client_ros)/launch/sample.launch">
+		<arg name="server" value="192.168.20.100"/>
+	</include>
+
 
 
        <!-- Initialize rosbag -->
        <node pkg="rosbag" type="record" name="rosbagger" if="$(arg bag)"
               args="record -o $(env HOME)/bags/ distances/ bluetooth_teleop/cmd_vel/ cmd_vel/
               imu/data_raw compass/imu compass/magnetic_field joint_states jackal_velocity_controller/odom tf/ navsat/" /> 
+
+       <!-- Initialize vicon position republisher node -->
+       <node pkg="cohrint_jackal_bringup" type="vicon_pose_repub.py" name="vicon_repub"/>
+
+       <!-- Initialize Kalman filter -->
+	<node pkg="robot_localization" type="ekf_localization_node" name="ekf_aspen" clear_params="true">
+              <rosparam command="load" file="$(find cohrint_jackal_bringup)/config/aspen_ekf.yaml" />
+              <remap from="odometry/filtered" to="odometry/filtered/aspen"/>
+	</node>
 </group>
 
 </launch>
