@@ -22,12 +22,12 @@
 
 
        <!-- Initialize rosbag -->
-       <node pkg="rosbag" type="record" name="rosbagger" if="$(arg bag)"
+       <!-- <node pkg="rosbag" type="record" name="rosbagger" if="$(arg bag)"
               args="record -o $(env HOME)/bags/ distances/ bluetooth_teleop/cmd_vel/ cmd_vel/
-              imu/data_raw compass/imu compass/magnetic_field joint_states jackal_velocity_controller/odom tf/ navsat/" /> 
+              imu/data_raw compass/imu compass/magnetic_field joint_states jackal_velocity_controller/odom tf/ navsat/" />  -->
 
        <!-- Initialize vicon position republisher node -->
-       <node pkg="cohrint_jackal_bringup" type="vicon_pose_repub.py" name="vicon_repub"/>
+       <!-- <node pkg="cohrint_jackal_bringup" type="vicon_pose_repub.py" name="vicon_repub"/> -->
 
        <!-- Initialize Kalman filter -->
 	<node pkg="robot_localization" type="ekf_localization_node" name="ekf_aspen" clear_params="true">
